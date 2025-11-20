@@ -68,14 +68,13 @@ export default function UploadSOPPage() {
 
         <div>
           <label className="mb-2 block text-sm font-medium text-gray-700">
-            SOP Images (Required)
+            SOP Images (Optional)
           </label>
           <input
             type="file"
             multiple
             accept="image/*"
             onChange={handleImageChange}
-            required
             className="w-full rounded-lg border border-gray-300 px-4 py-2"
           />
           {images.length > 0 && (
