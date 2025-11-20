@@ -85,18 +85,19 @@ def sop_to_schema(sop: SOP) -> SOPSchema:
 @router.post("", response_model=UploadSOPResponse, status_code=status.HTTP_201_CREATED)
 async def upload_and_structure_sop(
     title: Annotated[str, Form()],
-    images: list[UploadFile] = File(...),
+    images: list[UploadFile] = File(default=[]),
     text_content: Annotated[str | None, Form()] = None,
     current_user: User = Depends(get_current_user),
     sop_repo: SQLAlchemySOPRepository = Depends(get_sop_repository),
 ) -> UploadSOPResponse:
     """Upload and structure a new SOP.
 
-    Accepts image files and optional text, uses AI to structure the SOP.
+    Accepts optional image files and/or text content, uses AI to structure the SOP.
+    At least one of images or text_content must be provided.
 
     Args:
         title: SOP title
-        images: List of image files
+        images: Optional list of image files
         text_content: Optional text content
         current_user: Current authenticated user
         sop_repo: SOP repository
@@ -105,8 +106,15 @@ async def upload_and_structure_sop(
         UploadSOPResponse with structured SOP ID
 
     Raises:
-        HTTPException: If upload or structuring fails
+        HTTPException: If upload or structuring fails, or if neither images nor text provided
     """
+    # Validate that at least one of images or text_content is provided
+    if not images and not text_content:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="At least one of images or text content must be provided",
+        )
+
     # Save uploaded files to temporary directory
     temp_dir = Path("temp") / "sop_uploads"
     temp_dir.mkdir(parents=True, exist_ok=True)

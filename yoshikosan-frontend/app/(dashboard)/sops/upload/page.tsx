@@ -25,6 +25,13 @@ export default function UploadSOPPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    // Validate that at least one of images or text content is provided
+    if (images.length === 0 && !textContent.trim()) {
+      setError("Please provide at least one image or text content");
+      return;
+    }
+
     setUploading(true);
 
     try {
@@ -114,10 +121,14 @@ export default function UploadSOPPage() {
 
         <div className="rounded-lg bg-blue-50 p-4 text-sm text-blue-800">
           <p className="font-medium">Note:</p>
-          <p>
-            After upload, AI will automatically structure the SOP into tasks, steps, and safety
-            hazards. This may take a few moments.
-          </p>
+          <ul className="mt-1 list-disc space-y-1 pl-5">
+            <li>Provide at least one image or text content (or both)</li>
+            <li>
+              After upload, AI will automatically structure the SOP into tasks, steps, and safety
+              hazards
+            </li>
+            <li>This may take a few moments to process</li>
+          </ul>
         </div>
       </form>
     </div>
