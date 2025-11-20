@@ -116,7 +116,7 @@ async def upload_and_structure_sop(
         )
 
     # Save uploaded files to temporary directory
-    temp_dir = Path("temp") / "sop_uploads"
+    temp_dir = Path("/tmp") / "sop_uploads"
     temp_dir.mkdir(parents=True, exist_ok=True)
 
     temp_image_paths: list[Path] = []

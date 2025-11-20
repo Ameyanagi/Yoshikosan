@@ -68,7 +68,7 @@ async def execute_safety_check(
         )
 
     # Create temporary files for image and audio
-    temp_dir = Path("temp") / "checks"
+    temp_dir = Path("/tmp") / "checks"
     temp_dir.mkdir(parents=True, exist_ok=True)
 
     temp_image_path = (
