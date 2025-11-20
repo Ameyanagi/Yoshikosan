@@ -41,13 +41,13 @@ class UploadSOPUseCase:
     ALLOWED_TEXT_EXTENSIONS = {".txt"}
 
     def __init__(
-        self, sop_repository: SOPRepository, storage_base_path: Path | str = "storage"
+        self, sop_repository: SOPRepository, storage_base_path: Path | str = "/tmp/sop_storage"
     ):
         """Initialize the use case.
 
         Args:
             sop_repository: Repository for SOP persistence
-            storage_base_path: Base path for file storage (default: "storage")
+            storage_base_path: Base path for file storage (default: "/tmp/sop_storage")
         """
         self.sop_repository = sop_repository
         self.storage_base_path = Path(storage_base_path)
