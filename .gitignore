@@ -1,0 +1,7 @@
+.claude
+.env
+.env.local
+.env.*.local
+
+# Docker volumes
+postgres-data/
