@@ -239,6 +239,13 @@ pre-commit-update: ## Update pre-commit hook versions
 # Utility Commands
 # ==============================================================================
 
+.PHONY: openapi-export
+openapi-export: ## Export OpenAPI spec to openapi/openapi.json
+	@echo "📄 Exporting OpenAPI specification..."
+	@mkdir -p openapi
+	@curl -s http://localhost:6666/openapi.json | python3 -m json.tool > openapi/openapi.json
+	@echo "✅ OpenAPI spec exported to openapi/openapi.json"
+
 .PHONY: help
 help: ## Show this help message
 	@echo "ヨシコさん、ヨシッ！- Available Commands"

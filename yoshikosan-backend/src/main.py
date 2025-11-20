@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
-from src.api.v1.endpoints import auth
+from src.api.v1.endpoints import audit, auth, check, session, sop
 from src.config import settings
 from src.db.session import AsyncSessionLocal
 
@@ -63,6 +63,10 @@ app.add_middleware(
 
 # Include routers
 app.include_router(auth.router, prefix="/api")
+app.include_router(sop.router, prefix="/api/v1")
+app.include_router(session.router, prefix="/api/v1")
+app.include_router(check.router, prefix="/api/v1")
+app.include_router(audit.router, prefix="/api/v1")
 
 
 @app.get("/")

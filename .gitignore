@@ -5,3 +5,7 @@
 
 # Docker volumes
 postgres-data/
+
+# Generated artifacts
+openapi/
+temp/
