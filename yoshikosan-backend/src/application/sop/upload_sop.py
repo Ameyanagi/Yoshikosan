@@ -108,22 +108,23 @@ class UploadSOPUseCase:
         """Execute the SOP upload use case.
 
         Args:
-            request: Upload request with title, files, and optional text
+            request: Upload request with title, optional images, and/or text
 
         Returns:
             UploadSOPResponse with SOP ID and file paths
 
         Raises:
-            ValueError: If validation fails (invalid files, empty title, etc.)
+            ValueError: If validation fails (invalid files, empty title, no content, etc.)
         """
         # Validate request
         if not request.title.strip():
             raise ValueError("SOP title is required")
 
-        if not request.image_paths:
-            raise ValueError("At least one image file is required")
+        # Ensure at least one of images or text_content is provided
+        if not request.image_paths and not request.text_content:
+            raise ValueError("At least one of image files or text content is required")
 
-        # Validate all files
+        # Validate all files (if provided)
         for file_path in request.image_paths:
             self._validate_file(file_path)
 
@@ -133,10 +134,12 @@ class UploadSOPUseCase:
         # Save SOP to database (this generates the ID)
         saved_sop = await self.sop_repository.save(sop)
 
-        # Save files to storage
-        saved_image_paths = self._save_files_to_storage(
-            saved_sop.id, request.image_paths
-        )
+        # Save files to storage (if images provided)
+        saved_image_paths = []
+        if request.image_paths:
+            saved_image_paths = self._save_files_to_storage(
+                saved_sop.id, request.image_paths
+            )
 
         return UploadSOPResponse(
             sop_id=saved_sop.id,

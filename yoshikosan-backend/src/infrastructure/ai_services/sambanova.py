@@ -144,6 +144,104 @@ class SambanovaClient:
             logger.error(f"Unexpected error calling SambaNova API: {e}")
             raise
 
+    async def chat_completion(
+        self,
+        message: str,
+        response_schema: dict[str, Any] | None = None,
+    ) -> str | dict[str, Any]:
+        """
+        Send a text-only message to SambaNova's chat model.
+
+        Args:
+            message: Text message/prompt
+            response_schema: Optional JSON schema for structured output.
+                If provided, response will be parsed as JSON dict.
+                Schema should follow JSON Schema Draft 7 format.
+
+        Returns:
+            str: Text response if no schema provided
+            dict: Parsed JSON response if schema provided
+
+        Raises:
+            httpx.HTTPStatusError: If API returns error status
+            httpx.TimeoutException: If request times out
+        """
+        # Build request payload with text-only message
+        payload: dict[str, Any] = {
+            "model": self.model,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": message,
+                }
+            ],
+        }
+
+        # Add JSON schema mode if requested
+        if response_schema:
+            payload["response_format"] = {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "response",
+                    "strict": True,
+                    "schema": response_schema,
+                },
+            }
+            # Ensure streaming is disabled for JSON mode
+            payload["stream"] = False
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+
+        logger.info(
+            f"Sending text request to SambaNova: "
+            f"model={self.model}, schema={response_schema is not None}"
+        )
+
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.post(
+                    self.endpoint,
+                    json=payload,
+                    headers=headers,
+                )
+                response.raise_for_status()
+
+            response_data = response.json()
+            logger.debug(f"Raw API response: {response_data}")
+
+            # Extract content from response
+            content = response_data["choices"][0]["message"]["content"]
+
+            # Parse JSON if schema was provided
+            if response_schema:
+                try:
+                    parsed = json.loads(content)
+                    logger.info("Successfully parsed JSON response")
+                    return parsed
+                except json.JSONDecodeError as e:
+                    logger.error(f"Failed to parse JSON response: {e}")
+                    logger.error(f"Raw content: {content}")
+                    raise ValueError(f"Failed to parse JSON response: {e}") from e
+
+            # Return text response
+            logger.info(f"Received text response ({len(content)} chars)")
+            return content
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                f"HTTP error from SambaNova API: {e.response.status_code} - {e.response.text}"
+            )
+            raise
+        except httpx.TimeoutException:
+            logger.error("Request to SambaNova API timed out")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error calling SambaNova API: {e}")
+            raise
+
     async def transcribe_audio(
         self,
         audio_path: str,

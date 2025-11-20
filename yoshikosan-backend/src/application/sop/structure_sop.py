@@ -201,38 +201,48 @@ class StructureSOPUseCase:
         """Execute the SOP structuring use case.
 
         Args:
-            request: Structure request with SOP ID, images, and optional text
+            request: Structure request with SOP ID, optional images, and/or text
 
         Returns:
             StructureSOPResponse with populated SOP or error
 
         Raises:
-            ValueError: If SOP not found or has no images
+            ValueError: If SOP not found or no content provided
         """
         # Load SOP from database
         sop = await self.sop_repository.get_by_id(request.sop_id)
         if not sop:
             raise ValueError(f"SOP not found: {request.sop_id}")
 
-        if not request.image_paths:
-            raise ValueError("At least one image is required for structuring")
+        # Ensure at least one of images or text_content is provided
+        if not request.image_paths and not request.text_content:
+            raise ValueError("At least one of images or text content is required for structuring")
 
         # Build prompt with optional text content
         prompt = self._build_prompt(request.text_content)
 
         try:
-            # Call AI service with first image (vision model extracts text from image)
-            logger.info(
-                f"Calling SambaNova AI to structure SOP {sop.id} with {len(request.image_paths)} image(s)"
-            )
+            # Call AI service - use image if available, otherwise text-only
+            if request.image_paths:
+                logger.info(
+                    f"Calling SambaNova AI to structure SOP {sop.id} with {len(request.image_paths)} image(s)"
+                )
+                # Use the first image for analysis (vision model extracts text from image)
+                ai_response = await self.ai_client.analyze_image(
+                    image_path=str(request.image_paths[0]),
+                    prompt=prompt,
+                    response_schema=SOP_RESPONSE_SCHEMA,
+                )
+            else:
+                logger.info(
+                    f"Calling SambaNova AI to structure SOP {sop.id} with text content only"
+                )
+                # Text-only analysis
+                ai_response = await self.ai_client.chat_completion(
+                    message=prompt,
+                    response_schema=SOP_RESPONSE_SCHEMA,
+                )
 
-            # Use the first image for analysis
-            # Vision model will extract and analyze text from the image
-            ai_response = await self.ai_client.analyze_image(
-                image_path=str(request.image_paths[0]),
-                prompt=prompt,
-                response_schema=SOP_RESPONSE_SCHEMA,
-            )
 
             logger.info(f"AI analysis complete for SOP {sop.id}")
 

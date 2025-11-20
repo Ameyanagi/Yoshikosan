@@ -45,21 +45,22 @@ class SQLAlchemySOPRepository:
             existing.tasks = []
             await self.session.flush()
 
-        # Convert domain entity to model
-        model = sop_to_model(sop)
+            # Create new task models from domain entity
+            from src.infrastructure.database.mappers.sop_mapper import task_to_model
 
-        if not existing:
-            # Add new SOP
-            self.session.add(model)
+            existing.tasks = [task_to_model(t, sop.id) for t in sop.tasks]
+            await self.session.flush()
+            await self.session.refresh(existing)
+            # Return domain entity
+            return sop_to_domain(existing)
         else:
-            # Merge tasks into existing SOP
-            existing.tasks = model.tasks
-
-        await self.session.flush()
-        await self.session.refresh(model)
-
-        # Return domain entity
-        return sop_to_domain(model)
+            # Convert domain entity to model for new SOP
+            model = sop_to_model(sop)
+            self.session.add(model)
+            await self.session.flush()
+            await self.session.refresh(model)
+            # Return domain entity
+            return sop_to_domain(model)
 
     async def get_by_id(self, sop_id: UUID) -> SOP | None:
         """Get an SOP by ID with eager loading of relationships.

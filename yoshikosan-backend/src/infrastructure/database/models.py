@@ -15,6 +15,32 @@ class Base(AsyncAttrs, DeclarativeBase):
     pass
 
 
+class UserModel(Base):
+    """User model for authentication."""
+
+    __tablename__ = "users"
+
+    id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), primary_key=True, default=uuid4
+    )
+    email: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    password_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    def __repr__(self) -> str:
+        return f"<UserModel(id={self.id}, email={self.email})>"
+
+
 class SOPModel(Base):
     """SOP (Standard Operating Procedure) model."""
 
