@@ -2,17 +2,22 @@
 
 import logging
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import Field, PostgresDsn, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Find .env file in project root (parent of yoshikosan-backend)
+PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
+ENV_FILE = PROJECT_ROOT / ".env"
 
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(ENV_FILE) if ENV_FILE.exists() else ".env",
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore",
@@ -47,10 +52,18 @@ class Settings(BaseSettings):
     DISCORD_CLIENT_SECRET: str = Field(default="")
     OAUTH_REDIRECT_URI: str = Field(default="https://yoshikosan.ameyanagi.com/auth/callback")
 
-    # AI Services
+    # AI Services - SambaNova
     SAMBANOVA_API_KEY: str = Field(default="")
+    SAMBANOVA_MODEL: str = Field(default="Llama-4-Maverick-17B-128E-Instruct")
+    SAMBANOVA_ENDPOINT: str = Field(default="https://api.sambanova.ai/v1/chat/completions")
+    SAMBANOVA_WHISPER_MODEL: str = Field(default="Whisper-Large-v3")
+    SAMBANOVA_WHISPER_ENDPOINT: str = Field(default="https://api.sambanova.ai/v1/audio/transcriptions")
+
+    # AI Services - Hume AI
     HUME_AI_API_KEY: str = Field(default="")
     HUME_AI_SECRET_KEY: str = Field(default="")
+    HUME_AI_ENDPOINT: str = Field(default="https://api.hume.ai/v0/tts/inference")
+    HUME_AI_VOICE: str = Field(default="e5c30713-861d-476e-883a-fc0e1788f736")  # Fumiko voice
 
     @field_validator("ALLOWED_ORIGINS")
     @classmethod

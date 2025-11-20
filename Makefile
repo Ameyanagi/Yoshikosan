@@ -210,6 +210,11 @@ test-backend-cov: ## Run backend tests with coverage report
 	@echo "🧪 Running backend tests with coverage..."
 	cd $(BACKEND_DIR) && uv run pytest --cov=src --cov-report=html --cov-report=term
 
+.PHONY: test-ai-services
+test-ai-services: ## Run AI service integration tests (SambaNova + Hume AI)
+	@echo "🤖 Running AI service integration tests..."
+	cd $(BACKEND_DIR) && uv run pytest tests/ai_services/ -v -s
+
 # ==============================================================================
 # Pre-commit Hook Commands
 # ==============================================================================
