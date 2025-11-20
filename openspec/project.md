@@ -5,10 +5,12 @@
 **✅ Already Set Up:**
 - Next.js 16 frontend with TypeScript 5 (`yoshikosan-frontend/`)
 - Tailwind CSS v4 with new PostCSS plugin
-- Bun package manager and tooling
+- Bun 1.3 package manager and tooling
 - ESLint 9 configuration
-- Python 3.12 backend with Poetry (`yoshikosan-backend/`)
+- shadcn/ui component library
+- Python 3.13 backend with uv (`yoshikosan-backend/`)
 - Basic project structure (OpenSpec, git repos)
+- Docker infrastructure (docker-compose.yml, nginx.conf)
 
 **🔨 To Be Implemented:**
 - FastAPI backend structure (DDD layers)
@@ -46,16 +48,22 @@ According to Heinrich's Law (1:29:300), behind every serious accident lie 29 min
 - **Language**: TypeScript 5
 - **UI Library**: React 19
 - **Styling**: Tailwind CSS v4 (with @tailwindcss/postcss)
-- **Package Manager**: Bun (fast, all-in-one toolkit)
-- **Component Library**: shadcn/ui (to be added)
+- **Package Manager**: Bun 1.3 (fast, all-in-one JavaScript toolkit)
+  - Package manager, bundler, runtime, test runner in one
+  - 30x faster than npm
+  - Native TypeScript and JSX support
+- **Component Library**: shadcn/ui (already added)
 - **State Management**: React Query (TanStack Query) for server state, Zustand for client state (to be added)
 - **Forms**: React Hook Form + Zod validation (to be added)
 - **API Client**: Native Fetch API with TypeScript types
 
 ### Backend
-- **Framework**: FastAPI (Python 3.12+)
-- **Language**: Python with type hints (required)
-- **Package Manager**: Poetry or uv (modern, fast Python package manager)
+- **Framework**: FastAPI (Python 3.13)
+- **Language**: Python 3.13 (fixed version) with type hints (required)
+- **Package Manager**: uv (extremely fast, modern Python package manager)
+  - Replaces pip, poetry, virtualenv, and more
+  - Written in Rust, 10-100x faster than pip
+  - Built-in Python version management
 - **API**: RESTful API with automatic OpenAPI/Swagger documentation
 - **Architecture**: Domain-Driven Design (DDD) principles
 - **Database ORM**: SQLAlchemy 2.0 (async)
@@ -90,10 +98,10 @@ According to Heinrich's Law (1:29:300), behind every serious accident lie 29 min
 - **Environment Variables**: `.env` for secrets and configuration
 
 ### Development Tools
-- **Python Package Manager**: Poetry (or uv for faster installs)
-- **Frontend Package Manager**: Bun (includes runtime, bundler, test runner, package manager)
+- **Python Package Manager**: uv (primary) - Python version and dependency management
+- **Frontend Package Manager**: Bun 1.3 (includes runtime, bundler, test runner, package manager)
 - **Testing (Backend)**: pytest + pytest-asyncio + httpx
-- **Testing (Frontend)**: Bun's built-in test runner (Jest-compatible) or Vitest
+- **Testing (Frontend)**: Bun's built-in test runner (Jest-compatible, extremely fast)
 - **Linting (Backend)**: Ruff (extremely fast Python linter/formatter)
 - **Linting (Frontend)**: ESLint 9 (flat config)
 - **Formatting (Backend)**: Ruff (replaces black + isort)
@@ -106,7 +114,12 @@ According to Heinrich's Law (1:29:300), behind every serious accident lie 29 min
 ### Code Style
 
 #### Backend (Python/FastAPI)
-- **Language**: Python 3.12+ with type hints (required)
+- **Language**: Python 3.13 (fixed version) with type hints (required)
+- **Package Manager**: uv for all dependency management
+  - Install: `uv venv` to create virtual environment
+  - Install deps: `uv pip install -r requirements.txt` or `uv sync`
+  - Add packages: `uv add <package>`
+  - Run scripts: `uv run <command>`
 - **Naming Conventions**:
   - Files: snake_case (`user_profile.py`, `api_client.py`)
   - Classes: PascalCase (`UserProfile`, `SafetyCheckService`)
@@ -192,8 +205,8 @@ According to Heinrich's Law (1:29:300), behind every serious accident lie 29 min
 │   │   ├── integration/   # Integration tests (repos, APIs)
 │   │   └── conftest.py    # Pytest fixtures
 │   ├── alembic/           # Database migrations
-│   ├── pyproject.toml     # Poetry config
-│   ├── .python-version    # Python version (3.12+)
+│   ├── pyproject.toml     # uv project config
+│   ├── .python-version    # Python version (3.13)
 │   └── Dockerfile
 ├── yoshikosan-frontend/     # Next.js frontend
 │   ├── app/               # Next.js App Router (root level, not src/)
@@ -233,9 +246,9 @@ According to Heinrich's Law (1:29:300), behind every serious accident lie 29 min
 - **Frontend uses `app/` directory at root level** (not `src/app/`), following Next.js 13+ App Router conventions
 - **TypeScript path alias `@/*`** maps to `./*` (root), so `@/components` = `./components`
 - **Backend uses `src/` directory** for Python source code
-- **Separate git repos**: Each service (`yoshikosan-backend/`, `yoshikosan-frontend/`) has its own `.git`
-- **Bun for frontend**: Fast all-in-one toolkit (package manager, bundler, runtime, test runner)
-- **Poetry for backend**: Modern Python dependency management
+- **Monorepo**: Single git repository for all services
+- **Bun 1.3 for frontend**: Fast all-in-one toolkit (package manager, bundler, runtime, test runner)
+- **uv for backend**: Ultra-fast Python package and project manager (10-100x faster than pip)
 
 #### Domain-Driven Design (DDD) Structure (Backend)
 
@@ -490,8 +503,9 @@ NODE_ENV="production"
 
 ### Infrastructure Dependencies
 - **Make**: Task automation (Makefile-based commands)
-- **Python 3.12+**: Backend runtime
-- **Bun**: Frontend runtime and package manager
+- **Python 3.13**: Backend runtime (fixed version, managed by uv)
+- **uv**: Python package manager and environment manager
+- **Bun 1.3**: Frontend runtime and package manager
 - **Docker**: Required for containerization
 - **Docker Compose**: For orchestrating services (nginx + frontend + backend + postgres)
 - **Nginx**: Reverse proxy for path-based routing (required)
@@ -500,23 +514,40 @@ NODE_ENV="production"
 ## Development Setup Notes
 
 ### Initial Setup
+
+#### Prerequisites Installation
+```bash
+# Install uv (Python package manager)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install Bun (JavaScript runtime and package manager)
+curl -fsSL https://bun.sh/install | bash
+
+# Verify installations
+uv --version  # Should show uv version
+bun --version # Should show bun 1.3.x
+```
+
+#### Project Setup
 ```bash
 # Clone and navigate to project
 cd /home/ryuichi/dev/yoshikosan
 
-# Install backend dependencies
-cd yoshikosan-backend
-poetry install  # or: uv sync (if using uv)
-cd ..
-
-# Install frontend dependencies
-cd yoshikosan-frontend
-bun install
-cd ..
-
 # Set up environment variables (root level)
 cp .env.example .env
 # Edit .env with your secrets
+
+# Install backend dependencies with uv
+cd yoshikosan-backend
+uv venv                    # Create virtual environment
+uv pip install fastapi sqlalchemy alembic pytest httpx ruff mypy
+# Or if using pyproject.toml: uv sync
+cd ..
+
+# Install frontend dependencies with Bun
+cd yoshikosan-frontend
+bun install
+cd ..
 
 # Initialize database
 make db-init
@@ -628,11 +659,18 @@ When working on this project:
    - Example: Use `make docker-up` instead of `docker-compose up -d`
    - Run `make help` to see all available commands
 
-3a. **Use Bun for Frontend**: The frontend uses Bun, not npm/yarn/pnpm
+3a. **Use Bun 1.3 for Frontend**: The frontend uses Bun, not npm/yarn/pnpm
    - Install: `bun install` (not `npm install`)
    - Run: `bun dev` (not `npm run dev`)
-   - Test: `bun test` (built-in test runner)
+   - Test: `bun test` (built-in test runner, extremely fast)
    - Note: Path alias `@/*` maps to `./*` (root), not `./src/*`
+
+3b. **Use uv for Backend**: The backend uses uv, not pip/poetry/pipenv
+   - Create venv: `uv venv` (not `python -m venv`)
+   - Install: `uv pip install <package>` or `uv add <package>`
+   - Sync deps: `uv sync` (reads pyproject.toml)
+   - Run commands: `uv run <command>`
+   - Python version: Managed by uv (3.13 fixed)
 
 4. **Follow DDD Principles**: Respect layer boundaries (Domain → Application → Infrastructure)
    - Keep domain logic pure (no database/API dependencies)
@@ -645,8 +683,8 @@ When working on this project:
    - Use pytest for backend, Bun's test runner for frontend
 
 5a. **Use Modern Tools**:
-   - Backend: Use Ruff for linting and formatting (extremely fast, replaces black/isort/flake8)
-   - Frontend: Use Bun for all operations (package management, running dev server, testing)
+   - Backend: Use uv for package management (10-100x faster than pip) and Ruff for linting/formatting
+   - Frontend: Use Bun 1.3 for all operations (package management, dev server, testing - 30x faster than npm)
 
 6. **User Context**: Remember workers may be wearing gloves, in noisy environments, or unable to look at screen
 
