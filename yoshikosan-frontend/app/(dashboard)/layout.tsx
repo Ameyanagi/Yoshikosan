@@ -18,10 +18,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </Link>
 
           <div className="flex items-center gap-6">
-            <Link
-              href="/sops"
-              className="text-sm font-medium text-gray-700 hover:text-gray-900"
-            >
+            <Link href="/sops" className="text-sm font-medium text-gray-700 hover:text-gray-900">
               SOPs
             </Link>
             <Link
@@ -30,10 +27,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             >
               Sessions
             </Link>
-            <Link
-              href="/audit"
-              className="text-sm font-medium text-gray-700 hover:text-gray-900"
-            >
+            <Link href="/audit" className="text-sm font-medium text-gray-700 hover:text-gray-900">
               Audit
             </Link>
           </div>

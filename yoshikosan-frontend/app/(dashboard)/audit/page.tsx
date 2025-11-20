@@ -45,20 +45,14 @@ export default function AuditPage() {
     <div className="mx-auto max-w-7xl px-4 py-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold">Audit Dashboard</h1>
-        <p className="mt-2 text-gray-600">
-          Review and approve completed work sessions
-        </p>
+        <p className="mt-2 text-gray-600">Review and approve completed work sessions</p>
       </div>
 
-      {error && (
-        <div className="mb-4 rounded-lg bg-red-50 p-4 text-red-800">{error}</div>
-      )}
+      {error && <div className="mb-4 rounded-lg bg-red-50 p-4 text-red-800">{error}</div>}
 
       {sessions.length === 0 ? (
         <div className="rounded-lg border border-gray-200 bg-white p-12 text-center">
-          <p className="text-gray-500">
-            No sessions pending review.
-          </p>
+          <p className="text-gray-500">No sessions pending review.</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -70,15 +64,11 @@ export default function AuditPage() {
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <h3 className="mb-2 text-lg font-semibold">
-                    {session.sop_title}
-                  </h3>
+                  <h3 className="mb-2 text-lg font-semibold">{session.sop_title}</h3>
                   <div className="space-y-1 text-sm text-gray-600">
                     <p>Worker ID: {session.worker_id}</p>
                     {session.completed_at && (
-                      <p>
-                        Completed: {new Date(session.completed_at).toLocaleString()}
-                      </p>
+                      <p>Completed: {new Date(session.completed_at).toLocaleString()}</p>
                     )}
                     <p>Total Checks: {session.check_count}</p>
                     {session.failed_check_count > 0 && (
@@ -89,9 +79,7 @@ export default function AuditPage() {
                   </div>
                 </div>
                 <div className="ml-4 flex items-center">
-                  <span className="text-sm text-gray-500">
-                    Review →
-                  </span>
+                  <span className="text-sm text-gray-500">Review →</span>
                 </div>
               </div>
             </Link>

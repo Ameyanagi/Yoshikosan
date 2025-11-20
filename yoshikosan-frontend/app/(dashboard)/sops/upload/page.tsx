@@ -51,15 +51,11 @@ export default function UploadSOPPage() {
     <div className="mx-auto max-w-2xl px-4 py-8">
       <h1 className="mb-8 text-3xl font-bold">Upload Standard Operating Procedure</h1>
 
-      {error && (
-        <div className="mb-4 rounded-lg bg-red-50 p-4 text-red-800">{error}</div>
-      )}
+      {error && <div className="mb-4 rounded-lg bg-red-50 p-4 text-red-800">{error}</div>}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
-            SOP Title
-          </label>
+          <label className="mb-2 block text-sm font-medium text-gray-700">SOP Title</label>
           <input
             type="text"
             value={title}
@@ -83,9 +79,7 @@ export default function UploadSOPPage() {
             className="w-full rounded-lg border border-gray-300 px-4 py-2"
           />
           {images.length > 0 && (
-            <p className="mt-2 text-sm text-gray-600">
-              {images.length} image(s) selected
-            </p>
+            <p className="mt-2 text-sm text-gray-600">{images.length} image(s) selected</p>
           )}
         </div>
 
@@ -122,8 +116,8 @@ export default function UploadSOPPage() {
         <div className="rounded-lg bg-blue-50 p-4 text-sm text-blue-800">
           <p className="font-medium">Note:</p>
           <p>
-            After upload, AI will automatically structure the SOP into tasks, steps,
-            and safety hazards. This may take a few moments.
+            After upload, AI will automatically structure the SOP into tasks, steps, and safety
+            hazards. This may take a few moments.
           </p>
         </div>
       </form>

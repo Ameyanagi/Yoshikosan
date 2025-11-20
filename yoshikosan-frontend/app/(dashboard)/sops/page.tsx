@@ -55,11 +55,7 @@ export default function SOPsPage() {
         </Link>
       </div>
 
-      {error && (
-        <div className="mb-4 rounded-lg bg-red-50 p-4 text-red-800">
-          {error}
-        </div>
-      )}
+      {error && <div className="mb-4 rounded-lg bg-red-50 p-4 text-red-800">{error}</div>}
 
       {sops.length === 0 ? (
         <div className="rounded-lg border border-gray-200 bg-white p-12 text-center">

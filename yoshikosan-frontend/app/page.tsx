@@ -25,11 +25,7 @@ export default function Home() {
               <>
                 <div className="flex items-center gap-3">
                   {user.avatar_url && (
-                    <img
-                      src={user.avatar_url}
-                      alt={user.name}
-                      className="h-8 w-8 rounded-full"
-                    />
+                    <img src={user.avatar_url} alt={user.name} className="h-8 w-8 rounded-full" />
                   )}
                   <span className="text-sm font-medium">{user.name}</span>
                 </div>
@@ -63,18 +59,12 @@ export default function Home() {
       {/* Main Content */}
       <main className="flex flex-1 items-center justify-center bg-gray-50">
         <div className="text-center">
-          <h2 className="text-4xl font-bold text-gray-900">
-            Welcome to ヨシコさん、ヨシッ！
-          </h2>
-          <p className="mt-4 text-lg text-gray-600">
-            Industrial Safety Management System
-          </p>
+          <h2 className="text-4xl font-bold text-gray-900">Welcome to ヨシコさん、ヨシッ！</h2>
+          <p className="mt-4 text-lg text-gray-600">Industrial Safety Management System</p>
           {user ? (
             <div className="mt-8">
               <p className="text-xl text-gray-700">Hello, {user.name}! 👋</p>
-              <p className="mt-2 text-gray-600">
-                You are successfully authenticated.
-              </p>
+              <p className="mt-2 text-gray-600">You are successfully authenticated.</p>
             </div>
           ) : (
             <div className="mt-8 flex justify-center gap-4">

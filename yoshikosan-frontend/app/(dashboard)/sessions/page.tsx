@@ -69,9 +69,7 @@ export default function SessionsPage() {
         <h1 className="text-3xl font-bold">Work Sessions</h1>
       </div>
 
-      {error && (
-        <div className="mb-4 rounded-lg bg-red-50 p-4 text-red-800">{error}</div>
-      )}
+      {error && <div className="mb-4 rounded-lg bg-red-50 p-4 text-red-800">{error}</div>}
 
       {/* Current Active Session */}
       {currentSession && (
@@ -87,9 +85,7 @@ export default function SessionsPage() {
           </div>
           <div className="space-y-1 text-sm text-gray-700">
             <p>Session ID: {currentSession.id}</p>
-            <p>
-              Started: {new Date(currentSession.started_at).toLocaleString()}
-            </p>
+            <p>Started: {new Date(currentSession.started_at).toLocaleString()}</p>
             <p>Safety Checks: {currentSession.checks.length}</p>
           </div>
         </div>
@@ -98,9 +94,7 @@ export default function SessionsPage() {
       {/* Sessions List */}
       {sessions.length === 0 ? (
         <div className="rounded-lg border border-gray-200 bg-white p-12 text-center">
-          <p className="text-gray-500">
-            No sessions found. Start a session from an SOP to begin.
-          </p>
+          <p className="text-gray-500">No sessions found. Start a session from an SOP to begin.</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -125,10 +119,7 @@ export default function SessionsPage() {
                   <div className="space-y-1 text-sm text-gray-600">
                     <p>Started: {new Date(session.started_at).toLocaleString()}</p>
                     {session.completed_at && (
-                      <p>
-                        Completed:{" "}
-                        {new Date(session.completed_at).toLocaleString()}
-                      </p>
+                      <p>Completed: {new Date(session.completed_at).toLocaleString()}</p>
                     )}
                     <p>Safety Checks: {session.checks.length}</p>
                   </div>

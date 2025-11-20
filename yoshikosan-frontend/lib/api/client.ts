@@ -18,10 +18,7 @@ class ApiClient {
     this.baseUrl = baseUrl;
   }
 
-  private async request<T>(
-    path: string,
-    options: RequestInit = {}
-  ): Promise<ApiResponse<T>> {
+  private async request<T>(path: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
     try {
       const response = await fetch(`${this.baseUrl}${path}`, {
         ...options,
@@ -51,10 +48,7 @@ class ApiClient {
     }
   }
 
-  private async requestMultipart<T>(
-    path: string,
-    formData: FormData
-  ): Promise<ApiResponse<T>> {
+  private async requestMultipart<T>(path: string, formData: FormData): Promise<ApiResponse<T>> {
     try {
       const response = await fetch(`${this.baseUrl}${path}`, {
         method: "POST",
@@ -110,9 +104,9 @@ class ApiClient {
       }),
 
     me: async () =>
-      this.request<
-        paths["/api/auth/me"]["get"]["responses"][200]["content"]["application/json"]
-      >("/auth/me"),
+      this.request<paths["/api/auth/me"]["get"]["responses"][200]["content"]["application/json"]>(
+        "/auth/me"
+      ),
 
     google: {
       initiate: () => {
@@ -132,11 +126,7 @@ class ApiClient {
   // ============================================================================
 
   sops = {
-    upload: async (data: {
-      title: string;
-      images: File[];
-      text_content?: string;
-    }) => {
+    upload: async (data: { title: string; images: File[]; text_content?: string }) => {
       const formData = new FormData();
       formData.append("title", data.title);
       if (data.text_content) {
@@ -152,9 +142,9 @@ class ApiClient {
     },
 
     list: async () =>
-      this.request<
-        paths["/api/v1/sops"]["get"]["responses"][200]["content"]["application/json"]
-      >("/v1/sops"),
+      this.request<paths["/api/v1/sops"]["get"]["responses"][200]["content"]["application/json"]>(
+        "/v1/sops"
+      ),
 
     get: async (id: string) =>
       this.request<
@@ -221,10 +211,7 @@ class ApiClient {
         body: JSON.stringify(data),
       }),
 
-    override: async (
-      checkId: string,
-      data: { supervisor_id: string; reason: string }
-    ) =>
+    override: async (checkId: string, data: { supervisor_id: string; reason: string }) =>
       this.request<
         paths["/api/v1/checks/{check_id}/override"]["post"]["responses"][200]["content"]["application/json"]
       >(`/v1/checks/${checkId}/override`, {
