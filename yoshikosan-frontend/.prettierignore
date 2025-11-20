@@ -1,0 +1,29 @@
+# Dependencies
+node_modules
+bun.lock
+package-lock.json
+
+# Build output
+.next
+out
+dist
+build
+
+# Cache
+.turbo
+.eslintcache
+
+# Env files
+.env*
+!.env.example
+
+# Database
+postgres-data
+
+# Public assets
+public/fonts
+public/images
+
+# Generated files
+*.min.js
+*.min.css

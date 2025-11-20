@@ -1,0 +1,97 @@
+# Pre-commit hooks configuration for ヨシコさん、ヨシッ！
+# See https://pre-commit.com for more information
+
+repos:
+  # Backend: Ruff for linting and formatting
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      # Run linter with auto-fix
+      - id: ruff
+        name: Ruff Linter (Backend)
+        args: [--fix, --exit-non-zero-on-fix]
+        files: ^yoshikosan-backend/
+        exclude: ^yoshikosan-backend/(alembic/versions/|\.venv/)
+      # Run formatter
+      - id: ruff-format
+        name: Ruff Formatter (Backend)
+        files: ^yoshikosan-backend/
+        exclude: ^yoshikosan-backend/(alembic/versions/|\.venv/)
+
+  # Backend: mypy for type checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        name: mypy Type Checker (Backend)
+        files: ^yoshikosan-backend/src/
+        args: [--strict, --python-version=3.13, --ignore-missing-imports]
+        additional_dependencies:
+          - types-passlib
+          - types-python-jose
+          - sqlalchemy[mypy]
+          - pydantic
+
+  # Frontend: ESLint
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v9.17.0
+    hooks:
+      - id: eslint
+        name: ESLint (Frontend)
+        files: ^yoshikosan-frontend/
+        types: [file]
+        types_or: [javascript, jsx, ts, tsx]
+        args: [--fix, --max-warnings=0]
+        additional_dependencies:
+          - eslint@9.17.0
+          - eslint-config-next@16.0.0
+          - typescript@5.7.2
+          - '@typescript-eslint/parser@8.18.1'
+          - '@typescript-eslint/eslint-plugin@8.18.1'
+
+  # Frontend: Prettier
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        name: Prettier (Frontend)
+        files: ^yoshikosan-frontend/
+        types_or: [javascript, jsx, ts, tsx, json, yaml, markdown, css]
+        args: [--write]
+        exclude: ^yoshikosan-frontend/(node_modules/|\.next/|bun\.lock)
+
+  # General: File quality checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        name: Trim Trailing Whitespace
+        exclude: ^yoshikosan-frontend/(bun\.lock|package-lock\.json)$
+      - id: end-of-file-fixer
+        name: Fix End of Files
+        exclude: ^(yoshikosan-frontend/(bun\.lock|package-lock\.json)|.*\.svg)$
+      - id: check-yaml
+        name: Check YAML Syntax
+        exclude: ^\.github/
+      - id: check-json
+        name: Check JSON Syntax
+        exclude: ^yoshikosan-frontend/(bun\.lock|package-lock\.json)$
+      - id: check-toml
+        name: Check TOML Syntax
+      - id: check-merge-conflict
+        name: Check for Merge Conflicts
+      - id: check-added-large-files
+        name: Check for Large Files
+        args: [--maxkb=1000]
+      - id: mixed-line-ending
+        name: Fix Mixed Line Endings
+        args: [--fix=lf]
+
+  # Security: Check for secrets
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        name: Detect Secrets
+        args: [--baseline, .secrets.baseline]
+        exclude: ^(yoshikosan-frontend/bun\.lock|yoshikosan-backend/alembic/versions/)

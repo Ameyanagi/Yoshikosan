@@ -10,11 +10,19 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
-      - frontend
-      - backend
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
     networks:
       - yoshikosan-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   # Next.js Frontend
   frontend:
@@ -28,9 +36,18 @@ services:
       - PORT=3000
     expose:
       - "3000"
+    depends_on:
+      backend:
+        condition: service_healthy
     networks:
       - yoshikosan-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # FastAPI Backend
   backend:
@@ -39,6 +56,7 @@ services:
       dockerfile: Dockerfile
     container_name: yoshikosan-backend
     environment:
+      - NODE_ENV=${NODE_ENV:-production}
       - DATABASE_URL=${DATABASE_URL}
       - API_HOST=0.0.0.0
       - API_PORT=8000
@@ -50,13 +68,22 @@ services:
       - DISCORD_CLIENT_SECRET=${DISCORD_CLIENT_SECRET}
       - SAMBANOVA_API_KEY=${SAMBANOVA_API_KEY}
       - HUME_AI_API_KEY=${HUME_AI_API_KEY}
+      - HUME_AI_SECRET_KEY=${HUME_AI_SECRET_KEY}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
     expose:
       - "8000"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - yoshikosan-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # PostgreSQL Database
   postgres:
