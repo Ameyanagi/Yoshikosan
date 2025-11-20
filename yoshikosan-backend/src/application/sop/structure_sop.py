@@ -14,35 +14,37 @@ logger = logging.getLogger(__name__)
 
 # AI Prompt Template
 STRUCTURE_SOP_PROMPT = """
-You are analyzing a Standard Operating Procedure (SOP) or Hazard Prediction (KY/危険予知) document.
-Your task is to extract a structured task list with safety information.
+あなたは標準作業手順書（SOP）または危険予知（KY）文書を分析しています。
+安全情報を含む構造化されたタスクリストを抽出してください。
 
-Extract:
-1. **Title**: Overall task/procedure name
-2. **Tasks**: Major steps or phases (preparation → execution → cleanup)
-3. **Steps**: Specific actions within each task
-4. **Hazards**: For each step, identify:
-   - 危険要因 (hazard factors)
-   - Severity level (low, medium, high, critical)
-   - 対策 (mitigation measures)
+**重要: すべての出力は日本語で記述してください。**
 
-Return JSON matching this schema:
+抽出する内容:
+1. **タイトル**: 全体的な作業・手順の名称
+2. **タスク**: 主要な段階やフェーズ（準備 → 実行 → 片付け）
+3. **ステップ**: 各タスク内の具体的な作業
+4. **危険要因**: 各ステップについて以下を特定:
+   - 危険要因（hazard factors）
+   - 重大度レベル（low, medium, high, critical）
+   - 対策（mitigation measures）
+
+以下のJSONスキーマに従って日本語で返してください:
 {
-  "title": "string",
+  "title": "string（日本語）",
   "tasks": [
     {
-      "title": "string",
-      "description": "string (optional)",
+      "title": "string（日本語）",
+      "description": "string（日本語・オプション）",
       "steps": [
         {
-          "description": "string",
-          "expected_action": "string (what worker should do)",
-          "expected_result": "string (what should be verified)",
+          "description": "string（日本語・ステップの説明）",
+          "expected_action": "string（日本語・作業者が行うべきこと）",
+          "expected_result": "string（日本語・確認すべき結果）",
           "hazards": [
             {
-              "description": "string (危険要因)",
+              "description": "string（日本語・危険要因）",
               "severity": "low|medium|high|critical",
-              "mitigation": "string (対策)"
+              "mitigation": "string（日本語・対策）"
             }
           ]
         }
@@ -51,7 +53,8 @@ Return JSON matching this schema:
   ]
 }
 
-Be thorough and safety-focused. Extract all hazards even if not explicitly labeled.
+徹底的かつ安全重視で分析してください。明示的にラベル付けされていない危険要因もすべて抽出してください。
+すべてのテキスト（title, description, expected_action, expected_result, hazard description, mitigation）は日本語で記述してください。
 """
 
 # JSON Schema for structured response

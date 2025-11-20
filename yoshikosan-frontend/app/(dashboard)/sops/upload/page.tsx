@@ -28,7 +28,7 @@ export default function UploadSOPPage() {
 
     // Validate that at least one of images or text content is provided
     if (images.length === 0 && !textContent.trim()) {
-      setError("Please provide at least one image or text content");
+      setError("画像またはテキスト内容のいずれかを提供してください");
       return;
     }
 
@@ -48,7 +48,7 @@ export default function UploadSOPPage() {
         router.push(`/sops/${response.data.sop_id}`);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
+      setError(err instanceof Error ? err.message : "アップロードに失敗しました");
     } finally {
       setUploading(false);
     }
@@ -56,26 +56,26 @@ export default function UploadSOPPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
-      <h1 className="mb-8 text-3xl font-bold">Upload Standard Operating Procedure</h1>
+      <h1 className="mb-8 text-3xl font-bold">標準作業手順書アップロード</h1>
 
       {error && <div className="mb-4 rounded-lg bg-red-50 p-4 text-red-800">{error}</div>}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">SOP Title</label>
+          <label className="mb-2 block text-sm font-medium text-gray-700">SOPタイトル</label>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
             className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none"
-            placeholder="e.g., Machine Setup Procedure"
+            placeholder="例：機械セットアップ手順"
           />
         </div>
 
         <div>
           <label className="mb-2 block text-sm font-medium text-gray-700">
-            SOP Images (Optional)
+            SOP画像（任意）
           </label>
           <input
             type="file"
@@ -85,20 +85,20 @@ export default function UploadSOPPage() {
             className="w-full rounded-lg border border-gray-300 px-4 py-2"
           />
           {images.length > 0 && (
-            <p className="mt-2 text-sm text-gray-600">{images.length} image(s) selected</p>
+            <p className="mt-2 text-sm text-gray-600">{images.length}個の画像が選択されました</p>
           )}
         </div>
 
         <div>
           <label className="mb-2 block text-sm font-medium text-gray-700">
-            Additional Text Content (Optional)
+            追加テキスト内容（任意）
           </label>
           <textarea
             value={textContent}
             onChange={(e) => setTextContent(e.target.value)}
             rows={6}
             className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none"
-            placeholder="Enter any additional text content for the SOP..."
+            placeholder="SOPの追加テキスト内容を入力してください..."
           />
         </div>
 
@@ -108,26 +108,25 @@ export default function UploadSOPPage() {
             disabled={uploading}
             className="flex-1 rounded-lg bg-blue-600 px-6 py-3 font-medium text-white hover:bg-blue-700 disabled:bg-gray-400"
           >
-            {uploading ? "Uploading & Structuring..." : "Upload SOP"}
+            {uploading ? "アップロード中..." : "SOPをアップロード"}
           </button>
           <button
             type="button"
             onClick={() => router.back()}
             className="rounded-lg border border-gray-300 px-6 py-3 font-medium text-gray-700 hover:bg-gray-50"
           >
-            Cancel
+            キャンセル
           </button>
         </div>
 
         <div className="rounded-lg bg-blue-50 p-4 text-sm text-blue-800">
-          <p className="font-medium">Note:</p>
+          <p className="font-medium">注意：</p>
           <ul className="mt-1 list-disc space-y-1 pl-5">
-            <li>Provide at least one image or text content (or both)</li>
+            <li>画像またはテキスト内容のいずれか（または両方）を提供してください</li>
             <li>
-              After upload, AI will automatically structure the SOP into tasks, steps, and safety
-              hazards
+              アップロード後、AIが自動的にSOPをタスク、ステップ、安全上の危険に構造化します
             </li>
-            <li>This may take a few moments to process</li>
+            <li>処理に数分かかる場合があります</li>
           </ul>
         </div>
       </form>
