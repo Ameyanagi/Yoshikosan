@@ -137,7 +137,7 @@ class SambanovaClient:
                 f"HTTP error from SambaNova API: {e.response.status_code} - {e.response.text}"
             )
             raise
-        except httpx.TimeoutException as e:
+        except httpx.TimeoutException:
             logger.error("Request to SambaNova API timed out")
             raise
         except Exception as e:
@@ -215,7 +215,7 @@ class SambanovaClient:
                 f"{e.response.status_code} - {e.response.text}"
             )
             raise
-        except httpx.TimeoutException as e:
+        except httpx.TimeoutException:
             logger.error("Request to SambaNova Whisper API timed out")
             raise
         except Exception as e:

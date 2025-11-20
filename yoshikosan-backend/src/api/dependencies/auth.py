@@ -17,17 +17,17 @@ async def get_current_user(
 ) -> User:
     """
     Get current authenticated user from JWT token.
-    
+
     Extracts JWT from cookie, validates it, and fetches user from database.
     Raises 401 if token is invalid or user not found.
-    
+
     Args:
         access_token: JWT token from cookie
         db: Database session
-        
+
     Returns:
         User object
-        
+
     Raises:
         HTTPException: 401 Unauthorized if token invalid or user not found
     """
@@ -65,14 +65,14 @@ async def get_current_user_optional(
 ) -> User | None:
     """
     Get current authenticated user, or None if not authenticated.
-    
+
     Similar to get_current_user but returns None instead of raising exception.
     Useful for endpoints that support both authenticated and anonymous access.
-    
+
     Args:
         access_token: JWT token from cookie
         db: Database session
-        
+
     Returns:
         User object if authenticated, None otherwise
     """

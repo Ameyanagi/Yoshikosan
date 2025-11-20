@@ -11,17 +11,17 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds
 def validate_password(password: str) -> tuple[bool, list[str]]:
     """
     Validate password meets security requirements.
-    
+
     Requirements:
     - Minimum 8 characters
     - Maximum 128 characters
     - At least one uppercase letter
     - At least one lowercase letter
     - At least one number
-    
+
     Args:
         password: Plain-text password to validate
-        
+
     Returns:
         Tuple of (is_valid, errors_list)
     """

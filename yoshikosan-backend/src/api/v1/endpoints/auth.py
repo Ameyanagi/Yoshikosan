@@ -63,7 +63,7 @@ async def register(
 ) -> Any:
     """
     Register a new user with email and password.
-    
+
     Validates password requirements, checks for duplicate emails,
     creates user with hashed password, and returns JWT cookie.
     """
@@ -122,7 +122,7 @@ async def login(
 ) -> Any:
     """
     Login with email and password.
-    
+
     Verifies credentials, generates JWT, and sets HTTP-only cookie.
     """
     # Fetch user
@@ -176,7 +176,9 @@ async def google_login(request: Request) -> RedirectResponse:
 
     # Build redirect URI from request headers
     scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
-    host = request.headers.get("x-forwarded-host", request.headers.get("host", request.url.netloc))
+    host = request.headers.get(
+        "x-forwarded-host", request.headers.get("host", request.url.netloc)
+    )
     redirect_uri = f"{scheme}://{host}/api/auth/callback/google"
 
     google_auth_url = (
@@ -201,7 +203,9 @@ async def google_callback(
     """Handle Google OAuth callback."""
     # Build redirect URI from request headers (must match the one sent to Google)
     scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
-    host = request.headers.get("x-forwarded-host", request.headers.get("host", request.url.netloc))
+    host = request.headers.get(
+        "x-forwarded-host", request.headers.get("host", request.url.netloc)
+    )
     redirect_uri = f"{scheme}://{host}/api/auth/callback/google"
 
     # Exchange code for token
@@ -216,10 +220,10 @@ async def google_callback(
                 "grant_type": "authorization_code",
             },
         )
-        
+
         if token_response.status_code != 200:
             return RedirectResponse(url="/?error=oauth_failed")
-            
+
         tokens = token_response.json()
 
         # Get user info
@@ -227,10 +231,10 @@ async def google_callback(
             "https://www.googleapis.com/oauth2/v2/userinfo",
             headers={"Authorization": f"Bearer {tokens['access_token']}"},
         )
-        
+
         if user_response.status_code != 200:
             return RedirectResponse(url="/?error=oauth_failed")
-            
+
         user_info = user_response.json()
 
     # Find or create user
@@ -304,7 +308,9 @@ async def discord_login(request: Request) -> RedirectResponse:
 
     # Build redirect URI from request headers
     scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
-    host = request.headers.get("x-forwarded-host", request.headers.get("host", request.url.netloc))
+    host = request.headers.get(
+        "x-forwarded-host", request.headers.get("host", request.url.netloc)
+    )
     redirect_uri = f"{scheme}://{host}/api/auth/callback/discord"
 
     discord_auth_url = (
@@ -329,7 +335,9 @@ async def discord_callback(
     """Handle Discord OAuth callback."""
     # Build redirect URI from request headers (must match the one sent to Discord)
     scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
-    host = request.headers.get("x-forwarded-host", request.headers.get("host", request.url.netloc))
+    host = request.headers.get(
+        "x-forwarded-host", request.headers.get("host", request.url.netloc)
+    )
     redirect_uri = f"{scheme}://{host}/api/auth/callback/discord"
 
     # Exchange code for token
@@ -345,10 +353,10 @@ async def discord_callback(
             },
             headers={"Content-Type": "application/x-www-form-urlencoded"},
         )
-        
+
         if token_response.status_code != 200:
             return RedirectResponse(url="/?error=oauth_failed")
-            
+
         tokens = token_response.json()
 
         # Get user info
@@ -356,10 +364,10 @@ async def discord_callback(
             "https://discord.com/api/users/@me",
             headers={"Authorization": f"Bearer {tokens['access_token']}"},
         )
-        
+
         if user_response.status_code != 200:
             return RedirectResponse(url="/?error=oauth_failed")
-            
+
         user_info = user_response.json()
 
     # Find or create user
@@ -377,7 +385,7 @@ async def discord_callback(
             if avatar_hash
             else None
         )
-        
+
         user = User(
             email=email,
             name=user_info.get("username", email.split("@")[0]),

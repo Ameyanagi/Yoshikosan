@@ -14,17 +14,17 @@ ACCESS_TOKEN_EXPIRE_DAYS = 7
 def create_access_token(data: dict[str, Any]) -> str:
     """
     Create a JWT access token.
-    
+
     Args:
         data: Dictionary of claims to encode in the token
-        
+
     Returns:
         Encoded JWT token string
     """
     to_encode = data.copy()
     expire = datetime.utcnow() + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
     to_encode.update({"exp": expire})
-    
+
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
@@ -32,10 +32,10 @@ def create_access_token(data: dict[str, Any]) -> str:
 def verify_token(token: str) -> dict[str, Any] | None:
     """
     Verify and decode a JWT token.
-    
+
     Args:
         token: JWT token string
-        
+
     Returns:
         Decoded token payload if valid, None otherwise
     """

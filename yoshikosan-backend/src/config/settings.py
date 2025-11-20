@@ -50,20 +50,28 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: str = Field(default="")
     DISCORD_CLIENT_ID: str = Field(default="")
     DISCORD_CLIENT_SECRET: str = Field(default="")
-    OAUTH_REDIRECT_URI: str = Field(default="https://yoshikosan.ameyanagi.com/auth/callback")
+    OAUTH_REDIRECT_URI: str = Field(
+        default="https://yoshikosan.ameyanagi.com/auth/callback"
+    )
 
     # AI Services - SambaNova
     SAMBANOVA_API_KEY: str = Field(default="")
     SAMBANOVA_MODEL: str = Field(default="Llama-4-Maverick-17B-128E-Instruct")
-    SAMBANOVA_ENDPOINT: str = Field(default="https://api.sambanova.ai/v1/chat/completions")
+    SAMBANOVA_ENDPOINT: str = Field(
+        default="https://api.sambanova.ai/v1/chat/completions"
+    )
     SAMBANOVA_WHISPER_MODEL: str = Field(default="Whisper-Large-v3")
-    SAMBANOVA_WHISPER_ENDPOINT: str = Field(default="https://api.sambanova.ai/v1/audio/transcriptions")
+    SAMBANOVA_WHISPER_ENDPOINT: str = Field(
+        default="https://api.sambanova.ai/v1/audio/transcriptions"
+    )
 
     # AI Services - Hume AI
     HUME_AI_API_KEY: str = Field(default="")
     HUME_AI_SECRET_KEY: str = Field(default="")
     HUME_AI_ENDPOINT: str = Field(default="https://api.hume.ai/v0/tts/inference")
-    HUME_AI_VOICE: str = Field(default="e5c30713-861d-476e-883a-fc0e1788f736")  # Fumiko voice
+    HUME_AI_VOICE: str = Field(
+        default="e5c30713-861d-476e-883a-fc0e1788f736"
+    )  # Fumiko voice
 
     @field_validator("ALLOWED_ORIGINS")
     @classmethod
@@ -91,7 +99,11 @@ class Settings(BaseSettings):
         missing = []
         for field, hint in required_fields.items():
             value = getattr(self, field, "")
-            if not value or value == "your-secret-key-here-change-in-production-use-openssl-rand-hex-32":
+            if (
+                not value
+                or value
+                == "your-secret-key-here-change-in-production-use-openssl-rand-hex-32"
+            ):
                 missing.append(f"  - {field}: {hint}")
 
         if missing and self.NODE_ENV == "production":

@@ -12,7 +12,13 @@ import pytest
 def lego_image_path() -> str:
     """Return path to LEGO test image."""
     # Path relative to project root
-    image_path = Path(__file__).parent.parent.parent.parent / "data" / "photo" / "lego" / "LEGO_01_OK.JPEG"
+    image_path = (
+        Path(__file__).parent.parent.parent.parent
+        / "data"
+        / "photo"
+        / "lego"
+        / "LEGO_01_OK.JPEG"
+    )
     return str(image_path.absolute())
 
 
@@ -20,13 +26,19 @@ def lego_image_path() -> str:
 def lego_sop_text() -> str:
     """Return LEGO SOP text content."""
     # Path relative to project root
-    sop_path = Path(__file__).parent.parent.parent.parent / "data" / "SOP" / "lego" / "lego_sop.txt"
+    sop_path = (
+        Path(__file__).parent.parent.parent.parent
+        / "data"
+        / "SOP"
+        / "lego"
+        / "lego_sop.txt"
+    )
 
     if not sop_path.exists():
         # Return fallback text if file doesn't exist
         return "Please verify the assembly follows the standard operating procedure."
 
-    with open(sop_path, "r", encoding="utf-8") as f:
+    with open(sop_path, encoding="utf-8") as f:
         return f.read()
 
 

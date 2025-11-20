@@ -11,7 +11,9 @@ from tests.ai_services.conftest import save_test_result
 
 
 @pytest.mark.asyncio
-async def test_sambanova_analyze_image_text(lego_image_path: str, results_dir: Path) -> None:
+async def test_sambanova_analyze_image_text(
+    lego_image_path: str, results_dir: Path
+) -> None:
     """Test SambaNova image analysis with text response."""
     # Skip if API key not configured
     if not settings.SAMBANOVA_API_KEY:
@@ -77,7 +79,9 @@ async def test_sambanova_analyze_image_text(lego_image_path: str, results_dir: P
 
 
 @pytest.mark.asyncio
-async def test_sambanova_analyze_image_json_schema(lego_image_path: str, results_dir: Path) -> None:
+async def test_sambanova_analyze_image_json_schema(
+    lego_image_path: str, results_dir: Path
+) -> None:
     """Test SambaNova image analysis with JSON schema response."""
     # Skip if API key not configured
     if not settings.SAMBANOVA_API_KEY:
@@ -117,7 +121,9 @@ async def test_sambanova_analyze_image_json_schema(lego_image_path: str, results
         assert "has_lego" in response, "Response should have 'has_lego' key"
         assert "description" in response, "Response should have 'description' key"
         assert isinstance(response["has_lego"], bool), "'has_lego' should be boolean"
-        assert isinstance(response["description"], str), "'description' should be string"
+        assert isinstance(response["description"], str), (
+            "'description' should be string"
+        )
 
         # Save results
         request_data = {
@@ -166,7 +172,12 @@ async def test_sambanova_transcribe_audio_whisper(results_dir: Path) -> None:
         pytest.skip("SAMBANOVA_API_KEY not set in environment")
 
     # Path to the Hume AI generated audio
-    audio_path = Path(__file__).parent.parent.parent.parent / "data" / "sound" / "konnichiwa_hume.mp3"
+    audio_path = (
+        Path(__file__).parent.parent.parent.parent
+        / "data"
+        / "sound"
+        / "konnichiwa_hume.mp3"
+    )
 
     # Skip if audio file doesn't exist
     if not audio_path.exists():
