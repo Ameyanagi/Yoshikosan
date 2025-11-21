@@ -5,6 +5,7 @@
  */
 
 import { useRef, useState, useEffect } from "react";
+import MicRecorder from "mic-recorder-to-mp3";
 
 interface AudioCaptureProps {
   onCapture: (audioBase64: string) => void;
@@ -12,77 +13,112 @@ interface AudioCaptureProps {
 }
 
 export function AudioCapture({ onCapture, disabled }: AudioCaptureProps) {
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
+  const recorderRef = useRef<MicRecorder | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recordingTime, setRecordingTime] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const startedAtRef = useRef<number | null>(null);
 
   useEffect(() => {
     return () => {
-      // Cleanup: stop recording and timer when component unmounts
+      // Cleanup on unmount: stop recording and timer
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
-      if (mediaRecorderRef.current && isRecording) {
-        mediaRecorderRef.current.stop();
+      if (recorderRef.current) {
+        recorderRef.current.stop().catch(() => {
+          // Ignore stop errors during unmount
+        });
       }
     };
-  }, [isRecording]);
+  }, []);
 
   const startRecording = async () => {
     try {
       setError(null);
-      chunksRef.current = [];
+      setRecordingTime(0);
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) {
+        setError("Microphone is not available in this browser.");
+        return;
+      }
 
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          chunksRef.current.push(event.data);
-        }
-      };
+      const recorder = new MicRecorder({
+        bitRate: 128,
+      });
 
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(chunksRef.current, { type: "audio/webm" });
-        const reader = new FileReader();
+      recorderRef.current = recorder;
 
-        reader.onloadend = () => {
-          const base64 = (reader.result as string).split(",")[1];
-          onCapture(base64);
-        };
+      await recorder.start();
+      console.log("🎤 Recorder started");
 
-        reader.readAsDataURL(audioBlob);
-
-        // Stop all tracks
-        stream.getTracks().forEach((track) => track.stop());
-
-        // Clear timer
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-        }
-        setRecordingTime(0);
-      };
-
-      mediaRecorderRef.current = mediaRecorder;
-      mediaRecorder.start();
+      startedAtRef.current = Date.now();
       setIsRecording(true);
 
-      // Start timer
+      // Start timer directly here
+      console.log("⏱️ Starting timer at:", startedAtRef.current);
       timerRef.current = setInterval(() => {
-        setRecordingTime((prev) => prev + 1);
+        if (!startedAtRef.current) {
+          console.log("❌ No start time, skipping tick");
+          return;
+        }
+        const elapsed = Math.max(
+          0,
+          Math.round((Date.now() - startedAtRef.current) / 1000)
+        );
+        console.log("⏱️ Timer tick - Elapsed:", elapsed, "seconds");
+        setRecordingTime(elapsed);
       }, 1000);
+      console.log("✅ Timer created:", timerRef.current);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to access microphone");
+      console.error("Failed to start recording:", err);
+      setError(err instanceof Error ? err.message : "Failed to access microphone.");
+      setIsRecording(false);
     }
   };
 
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
+  const stopRecording = async () => {
+    if (!recorderRef.current || !isRecording) return;
+
+    try {
+      const [, blob] = await recorderRef.current.stop().getMp3();
+
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+      startedAtRef.current = null;
+
+      if (!blob || blob.size === 0) {
+        setError("No audio captured. Please check microphone permission and try again.");
+        setRecordingTime(0);
+        setIsRecording(false);
+        return;
+      }
+
+      const reader = new FileReader();
+
+      reader.onloadend = () => {
+        const base64 = (reader.result as string).split(",")[1];
+        onCapture(base64);
+      };
+
+      reader.readAsDataURL(blob);
+
+      setRecordingTime(0);
       setIsRecording(false);
+      recorderRef.current = null;
+      startedAtRef.current = null;
+    } catch (err) {
+      console.error("Failed to stop recording:", err);
+      setError(err instanceof Error ? err.message : "Failed to save recording. Please try again.");
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+      setRecordingTime(0);
+      setIsRecording(false);
+      recorderRef.current = null;
+      startedAtRef.current = null;
     }
   };
 

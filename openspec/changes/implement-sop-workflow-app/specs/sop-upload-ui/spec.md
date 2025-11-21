@@ -15,16 +15,26 @@ The system SHALL provide a user interface for uploading SOP documents.
 **And** optionally enter text description
 **And** click "Upload and Structure"
 **Then** the files are validated client-side
+**And** images are converted to base64 in memory (no file upload)
 **And** a progress indicator is shown
-**And** the files are uploaded to the backend
+**And** the data is sent to the backend as JSON
 **And** the user is navigated to the review page
 
 **Implementation**:
 - Component: `app/(auth)/sop/upload/page.tsx`
 - Form library: React Hook Form + Zod validation
-- File input: Accept `.txt, .jpg, .jpeg, .png`
+- File input: Accept `.jpg, .jpeg, .png`
 - Max size: 10MB per file
-- API call: `POST /api/v1/sops` with multipart/form-data
+- **Base64 encoding**: Use `FileReader.readAsDataURL()` to convert images in browser
+- API call: `POST /api/v1/sops` with JSON body:
+  ```json
+  {
+    "title": "string",
+    "images_base64": ["data:image/jpeg;base64,..."],
+    "text_content": "string (optional)"
+  }
+  ```
+- **No multipart/form-data**: All data sent as JSON with base64-encoded images
 
 ---
 

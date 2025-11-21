@@ -47,17 +47,21 @@
 ```
 User → Upload SOP (text/images)
   ↓
-Frontend validates file types
+Frontend converts images to base64
   ↓
-POST /api/v1/sops (multipart form-data)
+POST /api/v1/sops with JSON body:
+  {
+    title: string,
+    images_base64: string[],  // Direct base64 encoding
+    text_content: string?
+  }
   ↓
 StructureSOPUseCase:
-  1. Save uploaded files to storage
-  2. Extract text (if images → OCR via SambaNova)
-  3. Call SambaNova with prompt + images
-  4. Parse JSON response (structured tasks)
-  5. Create SOP aggregate with Tasks/Steps/Hazards
-  6. Persist to database
+  1. Decode base64 images in memory (no file storage)
+  2. Call SambaNova with prompt + base64 images directly
+  3. Parse JSON response (structured tasks)
+  4. Create SOP aggregate with Tasks/Steps/Hazards
+  5. Persist to database
   ↓
 Return structured SOP JSON
   ↓
@@ -83,34 +87,43 @@ Frontend enters execution mode:
 User performs step → clicks "ヨシッ!"
   ↓
 Frontend:
-  1. Capture photo from camera
+  1. Capture photo from camera (canvas.toDataURL)
+     OR upload photo from file picker (debug mode)
   2. Record audio (10 sec or until silence)
-  3. Send to backend
+     OR type text confirmation (debug mode)
+  3. Convert to base64 (no file upload)
+  4. Send directly to backend in JSON
   ↓
 POST /api/v1/checks
   Request body: {
-    session_id, step_id, image_base64, audio_base64
+    session_id, 
+    step_id, 
+    image_base64: string,      // From camera OR uploaded file
+    audio_base64?: string,     // From microphone (optional)
+    audio_transcript?: string  // From text input OR Whisper transcription
   }
   ↓
 ExecuteSafetyCheckUseCase:
-  1. Transcribe audio (via Whisper in SambaNova)
-  2. Analyze image + audio + expected step (via SambaNova)
-  3. Determine pass/fail + generate feedback
-  4. Create SafetyCheck entity
-  5. If pass → advance session to next step
-  6. Generate voice feedback (via Hume AI)
-  7. Persist check result
+  1. Decode base64 data in memory (no file storage)
+  2. Transcribe audio via SambaNova API (base64 input)
+  3. Analyze image + audio + expected step via SambaNova (base64 input)
+  4. Determine pass/fail + generate feedback
+  5. Create SafetyCheck entity (no evidence URLs - data not stored)
+  6. If pass → advance session to next step
+  7. Generate voice feedback via Hume AI
+  8. Return audio bytes directly as base64 in response
+  9. Persist check result (timestamp, result, feedback only)
   ↓
 Response: {
   result: "pass"|"fail",
   feedback_text: "褒める + 次のステップ" | "是正指示",
-  feedback_audio_url: "/media/feedback-{id}.mp3",
+  feedback_audio_base64: string,  // Direct base64 audio bytes
   next_step: {...} | null
 }
   ↓
 Frontend:
   1. Display feedback text
-  2. Play audio automatically
+  2. Decode base64 audio and play immediately
   3. Show next step (if pass)
   4. Allow manual override (button)
   ↓
@@ -118,6 +131,13 @@ Loop until all steps complete
   ↓
 POST /api/v1/sessions/{id}/complete
 ```
+
+**Key Architectural Decision: No File Storage for Evidence**
+- Images and audio are processed in-memory only
+- Base64 encoding used for transport (JSON-compatible)
+- Evidence is NOT stored to disk during processing
+- Only metadata (result, feedback, timestamp) saved to database
+- This simplifies deployment (no volume mounts) and privacy (no PII retention)
 
 ### Phase 3: Audit & Approval
 
@@ -500,6 +520,163 @@ Return JSON:
 - The full workflow context helps you understand what should have been done before and what comes after
 """
 ```
+
+## Alternative Input Methods (Debug Mode)
+
+### Camera Alternative: Photo Upload
+
+**Use Cases:**
+- Testing with sample photos from `data/photo/lego/`
+- Environments without camera access (desktop browsers, headless tests)
+- Accessibility (users who cannot use camera)
+- Quality control (upload high-quality reference photos)
+
+**Implementation:**
+```tsx
+// Enable with URL parameter: /sessions/123?debug=true
+const debugMode = useSearchParams().get('debug') === 'true';
+
+function WorkExecutionPage() {
+  const [imageSource, setImageSource] = useState<'camera' | 'upload'>('camera');
+  
+  const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Convert to base64 (same format as camera capture)
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result as string;
+      setImageBase64(base64);
+    };
+    reader.readAsDataURL(file);
+  };
+  
+  return (
+    <div>
+      {/* Primary: Camera */}
+      <video ref={videoRef} autoPlay />
+      <button onClick={captureFromCamera}>📷 Capture</button>
+      
+      {/* Debug Alternative: Upload */}
+      {debugMode && (
+        <>
+          <input 
+            type="file" 
+            accept="image/*" 
+            onChange={handleFileUpload}
+            style={{ display: 'none' }}
+            ref={fileInputRef}
+          />
+          <button onClick={() => fileInputRef.current?.click()}>
+            📁 Upload Photo (Debug)
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+```
+
+**API Behavior:** Identical - both camera capture and file upload produce `image_base64` string
+
+---
+
+### Microphone Alternative: Text Input
+
+**Use Cases:**
+- Testing without audio files
+- Silent environments (cannot speak "ヨシッ!")
+- Accessibility (hearing/speech impaired users)
+- Automated testing with pre-defined confirmations
+
+**Implementation:**
+```tsx
+function WorkExecutionPage() {
+  const [audioSource, setAudioSource] = useState<'mic' | 'text'>('mic');
+  const [manualTranscript, setManualTranscript] = useState('');
+  
+  const handleSubmitCheck = async () => {
+    const payload = {
+      session_id: sessionId,
+      step_id: currentStepId,
+      image_base64: imageBase64,
+      // Option 1: Audio recorded from microphone
+      ...(audioSource === 'mic' && { 
+        audio_base64: audioBase64 
+      }),
+      // Option 2: Text typed manually
+      ...(audioSource === 'text' && { 
+        audio_transcript: manualTranscript 
+      })
+    };
+    
+    await apiClient.checks.execute(payload);
+  };
+  
+  return (
+    <div>
+      {/* Primary: Microphone */}
+      <button onClick={startRecording}>🎤 Record</button>
+      
+      {/* Debug Alternative: Text */}
+      {debugMode && (
+        <div>
+          <label>Or type confirmation:</label>
+          <input
+            type="text"
+            placeholder="例：バルブ閉ヨシッ！"
+            value={manualTranscript}
+            onChange={(e) => setManualTranscript(e.target.value)}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+**Backend Behavior:**
+```python
+# In execute_safety_check.py
+
+# If audio_base64 provided: Transcribe with Whisper
+if request.audio_base64:
+    audio_transcript = await self.ai_client.transcribe_audio(
+        audio_base64=request.audio_base64,
+        language="ja"
+    )
+# If audio_transcript provided directly: Use as-is
+elif request.audio_transcript:
+    audio_transcript = request.audio_transcript
+else:
+    audio_transcript = ""  # Silent check
+
+# Rest of verification logic remains identical
+```
+
+---
+
+### Debug Mode Activation
+
+**URL Parameter:**
+```
+/sessions/8abe3303-f927-4271-83aa-344d5fdb6c74?debug=true
+```
+
+**Environment Variable:**
+```bash
+# .env.development
+NEXT_PUBLIC_DEBUG_MODE=true
+```
+
+**Benefits:**
+1. **Testing:** Use sample photos from `data/photo/lego/LEGO_01_OK.JPEG`
+2. **CI/CD:** Automated tests without hardware dependencies
+3. **Accessibility:** Alternative for users without camera/mic
+4. **Development:** Faster iteration without device setup
+
+---
 
 ## API Endpoint Design
 

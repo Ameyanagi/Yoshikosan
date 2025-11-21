@@ -79,12 +79,20 @@ async def execute_safety_check(
     )
 
     try:
-        # Decode base64 data and save to temp files
+        # Decode base64 image data and save to temp file
         image_data = base64.b64decode(request.image_base64)
-        audio_data = base64.b64decode(request.audio_base64)
-
         temp_image_path.write_bytes(image_data)
-        temp_audio_path.write_bytes(audio_data)
+
+        # Handle audio source conditionally
+        audio_transcript = None
+        if request.audio_base64:
+            # Decode audio and save to temp file for Whisper transcription
+            audio_data = base64.b64decode(request.audio_base64)
+            temp_audio_path.write_bytes(audio_data)
+        elif request.audio_transcript:
+            # Use provided transcript directly
+            audio_transcript = request.audio_transcript
+        # If neither provided, audio_transcript remains None (silent check)
 
         # Execute use case
         use_case = ExecuteSafetyCheckUseCase(session_repo, sop_repo)
@@ -92,7 +100,8 @@ async def execute_safety_check(
             session_id=request.session_id,
             step_id=request.step_id,
             image_path=temp_image_path,
-            audio_path=temp_audio_path,
+            audio_path=temp_audio_path if request.audio_base64 else None,
+            audio_transcript=audio_transcript,
         )
 
         response = await use_case.execute(use_case_request)
@@ -127,7 +136,7 @@ async def execute_safety_check(
         # Clean up temporary files
         if temp_image_path.exists():
             temp_image_path.unlink()
-        if temp_audio_path.exists():
+        if request.audio_base64 and temp_audio_path.exists():
             temp_audio_path.unlink()
 
 
@@ -141,6 +150,7 @@ async def override_check(
     request: OverrideCheckRequest,
     current_user: User = Depends(get_current_user),
     session_repo: SQLAlchemyWorkSessionRepository = Depends(get_session_repository),
+    sop_repo: SQLAlchemySOPRepository = Depends(get_sop_repository),
 ) -> OverrideCheckResponse:
     """Override a safety check result (supervisor only).
 
@@ -149,6 +159,7 @@ async def override_check(
         request: Override request with reason
         current_user: Current authenticated user (must be supervisor)
         session_repo: Session repository
+        sop_repo: SOP repository
 
     Returns:
         OverrideCheckResponse
@@ -160,11 +171,15 @@ async def override_check(
     # For now, allow any authenticated user (will be restricted in production)
 
     # Find session containing this check
-    # This is a simplified implementation - in production you'd have a check repository
-    sessions = await session_repo.list_pending_review()
+    # Search in both current user's sessions and pending review sessions
+    user_sessions = await session_repo.list_by_worker(current_user.id)
+    pending_sessions = await session_repo.list_pending_review()
+
+    # Combine and deduplicate sessions
+    all_sessions = {session.id: session for session in user_sessions + pending_sessions}
 
     target_session = None
-    for session in sessions:
+    for session in all_sessions.values():
         for check in session.checks:
             if check.id == check_id:
                 target_session = session
@@ -178,7 +193,37 @@ async def override_check(
         )
 
     try:
-        target_session.override_last_check(request.reason, current_user.id)
+        # Find which step was overridden to advance session
+        overridden_step_id = None
+        for check in target_session.checks:
+            if check.id == check_id:
+                overridden_step_id = check.step_id
+                break
+
+        # Override the check
+        target_session.override_check(check_id, request.reason, current_user.id)
+
+        # Advance to next step if session is still in progress
+        if target_session.status.value == "in_progress" and overridden_step_id:
+            # Load SOP to find next step
+            sop = await sop_repo.get_by_id(target_session.sop_id)
+            if sop:
+                # Find next step ID
+                next_step_id = None
+                found_current = False
+                for task in sop.tasks:
+                    for step in task.steps:
+                        if found_current:
+                            next_step_id = step.id
+                            break
+                        if step.id == overridden_step_id:
+                            found_current = True
+                    if next_step_id:
+                        break
+
+                # Advance session to next step
+                target_session.advance_to_next_step(next_step_id)
+
         await session_repo.save(target_session)
 
         return OverrideCheckResponse(check_id=check_id, overridden=True)

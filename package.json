@@ -1,0 +1,13 @@
+{
+  "name": "yoshikosan-workflow-test",
+  "version": "1.0.0",
+  "description": "E2E workflow test for Yoshikosan SOP application",
+  "main": "test-workflow.js",
+  "scripts": {
+    "test": "node test-workflow.js",
+    "test:headless": "HEADLESS=true node test-workflow.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.40.0"
+  }
+}

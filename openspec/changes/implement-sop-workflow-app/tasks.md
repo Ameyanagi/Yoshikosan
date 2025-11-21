@@ -15,6 +15,7 @@
 - ✅ Phase 6: Frontend Core Infrastructure (API client, routing) - **COMPLETE**
 - ✅ Phase 7: SOP Management UI (upload, list, detail) - **COMPLETE**
 - ✅ Phase 8: Work Session UI (camera, audio, safety checks) - **COMPLETE**
+- ✅ Phase 8.9: Debug Mode Alternatives (photo upload, text input) - **COMPLETE**
 - ✅ Phase 9: Audit & Review UI (supervisor workflow) - **COMPLETE**
 
 ### Future Work 📋
@@ -556,6 +557,31 @@
 - [x] Allow navigation to session list
 
 **Validation**: ✅ Completed - Session completion workflow
+
+---
+
+### 8.9 Debug Mode Alternative Inputs ✅
+- [x] Create `components/photo-upload.tsx` - file upload alternative to camera
+- [x] Create `components/text-confirmation.tsx` - text input alternative to audio
+- [x] Update session page to detect debug mode (`?debug=true` URL parameter)
+- [x] Add input method toggles (camera/upload, microphone/text)
+- [x] Update check execution to support `audio_transcript` field
+- [x] Show "DEBUG MODE" badge when active
+- [x] Handle both base64 image sources (camera and upload)
+- [x] Handle both audio sources (microphone and text transcript)
+- [x] Reset all captured data after check completion
+
+**Validation**: ✅ Completed - Debug mode UI fully integrated
+
+**Use Cases:**
+- Testing with sample photos from `data/photo/lego/*.JPEG`
+- CI/CD automation without hardware dependencies
+- Accessibility for users without camera/microphone
+- Desktop development without mobile device
+
+**Activation:**
+- URL: `/sessions/{id}?debug=true`
+- Environment: `NEXT_PUBLIC_DEBUG_MODE=true`
 
 ---
 

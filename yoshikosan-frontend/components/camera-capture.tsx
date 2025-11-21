@@ -19,6 +19,35 @@ export function CameraCapture({ onCapture, disabled }: CameraCaptureProps) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!videoRef.current || !stream) return;
+
+    const video = videoRef.current;
+
+    // Attach stream once the video element is mounted
+    video.srcObject = stream;
+
+    const playVideo = () => {
+      video
+        .play()
+        .catch((err) => {
+          console.error("Failed to play video:", err);
+        });
+    };
+
+    if (video.readyState >= 1) {
+      playVideo();
+    } else {
+      video.onloadedmetadata = () => {
+        playVideo();
+      };
+    }
+
+    return () => {
+      video.onloadedmetadata = null;
+    };
+  }, [stream]);
+
+  useEffect(() => {
     return () => {
       // Cleanup: stop stream when component unmounts
       if (stream) {
@@ -30,14 +59,16 @@ export function CameraCapture({ onCapture, disabled }: CameraCaptureProps) {
   const startCamera = async () => {
     try {
       setError(null);
+
+      // Use ideal constraints for better iOS compatibility
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
+        video: {
+          facingMode: { ideal: "environment" },  // Prefer rear, fallback to front
+          width: { ideal: 1920, max: 1920 },
+          height: { ideal: 1080, max: 1080 }
+        },
         audio: false,
       });
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-      }
 
       setStream(mediaStream);
       setIsActive(true);
@@ -51,6 +82,9 @@ export function CameraCapture({ onCapture, disabled }: CameraCaptureProps) {
       stream.getTracks().forEach((track) => track.stop());
       setStream(null);
     }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
     setIsActive(false);
   };
 
@@ -59,8 +93,14 @@ export function CameraCapture({ onCapture, disabled }: CameraCaptureProps) {
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    const context = canvas.getContext("2d");
 
+    // Validate video dimensions before capture
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+      setError("カメラの準備ができていません。もう一度お試しください。");
+      return;
+    }
+
+    const context = canvas.getContext("2d");
     if (!context) return;
 
     // Set canvas size to match video
@@ -70,8 +110,8 @@ export function CameraCapture({ onCapture, disabled }: CameraCaptureProps) {
     // Draw current video frame to canvas
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // Convert to base64
-    const imageBase64 = canvas.toDataURL("image/jpeg").split(",")[1];
+    // Convert to base64 with quality optimization
+    const imageBase64 = canvas.toDataURL("image/jpeg", 0.85).split(",")[1];
 
     onCapture(imageBase64);
     stopCamera();
@@ -92,7 +132,14 @@ export function CameraCapture({ onCapture, disabled }: CameraCaptureProps) {
       ) : (
         <>
           <div className="relative overflow-hidden rounded-lg bg-black">
-            <video ref={videoRef} autoPlay playsInline className="w-full" />
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="w-full object-cover"
+              style={{ minHeight: '300px' }}
+            />
           </div>
 
           <div className="flex gap-2">

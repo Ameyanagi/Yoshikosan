@@ -11,7 +11,8 @@ class ExecuteCheckRequest(BaseModel):
     session_id: UUID
     step_id: UUID
     image_base64: str
-    audio_base64: str
+    audio_base64: str | None = None
+    audio_transcript: str | None = None
 
 
 class ExecuteCheckResponse(BaseModel):

@@ -181,6 +181,35 @@ class WorkSession:
         self.approved_by = supervisor_id  # Track who rejected it
         self.locked = True
 
+    def override_check(self, check_id: UUID, reason: str, supervisor_id: UUID) -> None:
+        """Override a specific safety check result.
+
+        Args:
+            check_id: ID of the check to override
+            reason: Reason for the override
+            supervisor_id: ID of the supervisor performing override
+
+        Raises:
+            ValueError: If session is locked, check not found, or reason is empty
+        """
+        self._ensure_not_locked()
+        if not reason.strip():
+            raise ValueError("Override reason is required")
+
+        # Find the check by ID
+        target_check = None
+        for check in self.checks:
+            if check.id == check_id:
+                target_check = check
+                break
+
+        if not target_check:
+            raise ValueError(f"Check {check_id} not found in session")
+
+        target_check.result = CheckResult.OVERRIDE
+        target_check.override_reason = reason
+        target_check.override_by = supervisor_id
+
     def override_last_check(self, reason: str, supervisor_id: UUID) -> None:
         """Override the result of the last safety check.
 

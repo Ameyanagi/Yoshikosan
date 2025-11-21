@@ -47,19 +47,23 @@ class SQLAlchemyWorkSessionRepository:
             existing.locked = work_session.locked
             existing.rejection_reason = work_session.rejection_reason
 
-            # Remove existing checks
+            # Remove existing checks and add new ones
             existing.checks = []
             await self.session.flush()
-
-        # Convert domain entity to model
-        model = session_to_model(work_session)
-
-        if not existing:
-            # Add new session
-            self.session.add(model)
+            
+            # Import check_to_model from mapper
+            from src.infrastructure.database.mappers.session_mapper import check_to_model
+            
+            # Add updated checks
+            for check in work_session.checks:
+                check_model = check_to_model(check, work_session.id)
+                existing.checks.append(check_model)
+            
+            model = existing
         else:
-            # Merge checks into existing session
-            existing.checks = model.checks
+            # Convert domain entity to model and add new session
+            model = session_to_model(work_session)
+            self.session.add(model)
 
         await self.session.flush()
         await self.session.refresh(model)

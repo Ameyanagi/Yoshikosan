@@ -90,7 +90,8 @@ class ExecuteSafetyCheckRequest:
     session_id: UUID
     step_id: UUID
     image_path: Path  # Temporary image file
-    audio_path: Path  # Temporary audio file
+    audio_path: Path | None = None  # Temporary audio file (optional)
+    audio_transcript: str | None = None  # Pre-transcribed audio text (optional)
 
 
 @dataclass
@@ -213,7 +214,7 @@ class ExecuteSafetyCheckUseCase:
         """
         # Use Hume AI to generate empathic TTS
         # For MVP, we'll save to temp file then read bytes
-        temp_audio_path = Path("temp_feedback.mp3")
+        temp_audio_path = Path("/tmp") / "temp_feedback.mp3"
 
         try:
             await self.tts_client.synthesize_speech(
@@ -260,11 +261,21 @@ class ExecuteSafetyCheckUseCase:
         # Find the step being checked
         task_num, step_num, step = self._find_step_in_sop(sop, request.step_id)
 
-        # Transcribe audio
-        logger.info(f"Transcribing audio for session {session.id}")
-        audio_transcript = await self.ai_client.transcribe_audio(
-            audio_path=str(request.audio_path), language="ja"
-        )
+        # Get audio transcript (either from pre-transcribed text or by transcribing audio)
+        if request.audio_transcript:
+            # Use provided transcript directly (debug mode text input)
+            logger.info(f"Using provided transcript for session {session.id}")
+            audio_transcript = request.audio_transcript
+        elif request.audio_path:
+            # Transcribe audio with Whisper
+            logger.info(f"Transcribing audio for session {session.id}")
+            audio_transcript = await self.ai_client.transcribe_audio(
+                audio_path=str(request.audio_path), language="ja"
+            )
+        else:
+            # Silent check (image only)
+            logger.info(f"Performing silent check for session {session.id}")
+            audio_transcript = ""
 
         # Build verification prompt with full SOP context
         full_sop_structure = self._format_sop_structure(sop)

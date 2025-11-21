@@ -5,10 +5,12 @@
  */
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { apiClient } from "@/lib/api";
 import { CameraCapture } from "@/components/camera-capture";
 import { AudioCapture } from "@/components/audio-capture";
+import { PhotoUpload } from "@/components/photo-upload";
+import { TextConfirmation } from "@/components/text-confirmation";
 import type { paths } from "@/lib/api/schema";
 
 type WorkSession =
@@ -20,15 +22,26 @@ type SOPSchema =
 export default function SessionDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const sessionId = params.id as string;
+
+  // Debug mode detection
+  const debugMode = searchParams.get('debug') === 'true' || 
+                    process.env.NEXT_PUBLIC_DEBUG_MODE === 'true';
 
   const [session, setSession] = useState<WorkSession | null>(null);
   const [sop, setSOP] = useState<SOPSchema | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Input method selection (for debug mode)
+  const [imageSource, setImageSource] = useState<'camera' | 'upload'>('camera');
+  const [audioSource, setAudioSource] = useState<'microphone' | 'text'>('microphone');
+
+  // Captured data
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [capturedAudio, setCapturedAudio] = useState<string | null>(null);
+  const [audioTranscript, setAudioTranscript] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
   const [feedbackAudio, setFeedbackAudio] = useState<string | null>(null);
 
@@ -67,8 +80,24 @@ export default function SessionDetailPage() {
   };
 
   const handleExecuteCheck = async () => {
-    if (!capturedImage || !capturedAudio || !session?.current_step_id) {
-      setError("Please capture both image and audio before executing check");
+    // Validate inputs based on selected source
+    if (!capturedImage) {
+      setError("Please capture or upload an image before executing check");
+      return;
+    }
+
+    if (audioSource === 'microphone' && !capturedAudio) {
+      setError("Please record audio before executing check");
+      return;
+    }
+
+    if (audioSource === 'text' && !audioTranscript) {
+      setError("Please enter confirmation text before executing check");
+      return;
+    }
+
+    if (!session?.current_step_id) {
+      setError("No current step found");
       return;
     }
 
@@ -76,12 +105,21 @@ export default function SessionDetailPage() {
     setError(null);
 
     try {
-      const response = await apiClient.checks.execute({
+      // Build request payload based on audio source
+      const payload: any = {
         session_id: sessionId,
         step_id: session.current_step_id,
         image_base64: capturedImage,
-        audio_base64: capturedAudio,
-      });
+      };
+
+      // Add audio data based on source
+      if (audioSource === 'microphone' && capturedAudio) {
+        payload.audio_base64 = capturedAudio;
+      } else if (audioSource === 'text' && audioTranscript) {
+        payload.audio_transcript = audioTranscript;
+      }
+
+      const response = await apiClient.checks.execute(payload);
 
       if (response.error) {
         setError(response.error);
@@ -102,6 +140,7 @@ export default function SessionDetailPage() {
         // Reset captures
         setCapturedImage(null);
         setCapturedAudio(null);
+        setAudioTranscript(null);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Check failed");
@@ -117,6 +156,33 @@ export default function SessionDetailPage() {
       setError(response.error);
     } else {
       router.push("/sessions");
+    }
+  };
+
+  const handleOverride = async (checkId: string) => {
+    const reason = prompt("Override reason (supervisor note):");
+
+    if (!reason) {
+      return; // User cancelled
+    }
+
+    // For MVP, use a placeholder supervisor ID
+    // In production, this would come from auth context
+    const supervisorId = "supervisor-override";
+
+    const response = await apiClient.checks.override(checkId, {
+      supervisor_id: supervisorId,
+      reason: reason,
+    });
+
+    if (response.error) {
+      setError(response.error);
+    } else {
+      // Refresh session to show updated check
+      const sessionResponse = await apiClient.sessions.get(sessionId);
+      if (sessionResponse.data) {
+        setSession(sessionResponse.data);
+      }
     }
   };
 
@@ -244,32 +310,126 @@ export default function SessionDetailPage() {
         {currentStep && session.status === "in_progress" && (
           <div className="space-y-6">
             <div className="rounded-lg border border-gray-200 bg-white p-6">
-              <h2 className="mb-4 text-xl font-semibold">Safety Verification</h2>
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Safety Verification</h2>
+                {debugMode && (
+                  <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-medium text-yellow-800">
+                    DEBUG MODE
+                  </span>
+                )}
+              </div>
 
               <div className="space-y-4">
+                {/* Image Capture Section */}
                 <div>
-                  <h3 className="mb-2 text-sm font-medium text-gray-700">
-                    1. Capture Current Work
-                  </h3>
-                  <CameraCapture onCapture={handleImageCapture} disabled={checking} />
+                  <div className="mb-2 flex items-center justify-between">
+                    <h3 className="text-sm font-medium text-gray-700">
+                      1. Capture Current Work
+                    </h3>
+                    {debugMode && (
+                      <div className="flex gap-2 text-xs">
+                        <button
+                          onClick={() => {
+                            setImageSource('camera');
+                            setCapturedImage(null);
+                          }}
+                          className={`rounded px-2 py-1 ${
+                            imageSource === 'camera'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-gray-200 text-gray-700'
+                          }`}
+                        >
+                          📷 Camera
+                        </button>
+                        <button
+                          onClick={() => {
+                            setImageSource('upload');
+                            setCapturedImage(null);
+                          }}
+                          className={`rounded px-2 py-1 ${
+                            imageSource === 'upload'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-gray-200 text-gray-700'
+                          }`}
+                        >
+                          📁 Upload
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {imageSource === 'camera' ? (
+                    <CameraCapture onCapture={handleImageCapture} disabled={checking} />
+                  ) : (
+                    <PhotoUpload onCapture={handleImageCapture} disabled={checking} />
+                  )}
+                  
                   {capturedImage && (
                     <div className="mt-2 text-sm text-green-600">✓ Image captured</div>
                   )}
                 </div>
 
+                {/* Audio Capture Section */}
                 <div>
-                  <h3 className="mb-2 text-sm font-medium text-gray-700">
-                    2. Describe What You Did
-                  </h3>
-                  <AudioCapture onCapture={handleAudioCapture} disabled={checking} />
-                  {capturedAudio && (
-                    <div className="mt-2 text-sm text-green-600">✓ Audio captured</div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <h3 className="text-sm font-medium text-gray-700">
+                      2. Describe What You Did
+                    </h3>
+                    {debugMode && (
+                      <div className="flex gap-2 text-xs">
+                        <button
+                          onClick={() => {
+                            setAudioSource('microphone');
+                            setCapturedAudio(null);
+                            setAudioTranscript(null);
+                          }}
+                          className={`rounded px-2 py-1 ${
+                            audioSource === 'microphone'
+                              ? 'bg-red-600 text-white'
+                              : 'bg-gray-200 text-gray-700'
+                          }`}
+                        >
+                          🎤 Mic
+                        </button>
+                        <button
+                          onClick={() => {
+                            setAudioSource('text');
+                            setCapturedAudio(null);
+                            setAudioTranscript(null);
+                          }}
+                          className={`rounded px-2 py-1 ${
+                            audioSource === 'text'
+                              ? 'bg-red-600 text-white'
+                              : 'bg-gray-200 text-gray-700'
+                          }`}
+                        >
+                          ✏️ Text
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {audioSource === 'microphone' ? (
+                    <AudioCapture onCapture={handleAudioCapture} disabled={checking} />
+                  ) : (
+                    <TextConfirmation onCapture={setAudioTranscript} disabled={checking} />
+                  )}
+                  
+                  {(capturedAudio || audioTranscript) && (
+                    <div className="mt-2 text-sm text-green-600">
+                      ✓ {audioSource === 'microphone' ? 'Audio' : 'Text'} captured
+                    </div>
                   )}
                 </div>
 
                 <button
                   onClick={handleExecuteCheck}
-                  disabled={!capturedImage || !capturedAudio || checking}
+                  disabled={
+                    !capturedImage ||
+                    (audioSource === 'microphone' && !capturedAudio) ||
+                    (audioSource === 'text' && !audioTranscript) ||
+                    checking
+                  }
                   className="w-full rounded-lg bg-blue-600 px-6 py-3 font-medium text-white hover:bg-blue-700 disabled:bg-gray-400"
                 >
                   {checking ? "Verifying with AI..." : "Execute Safety Check"}
@@ -285,33 +445,64 @@ export default function SessionDetailPage() {
         <div className="mt-8 rounded-lg border border-gray-200 bg-white p-6">
           <h2 className="mb-4 text-xl font-semibold">Safety Check History</h2>
           <div className="space-y-3">
-            {session.checks.map((check) => (
-              <div
-                key={check.id}
-                className="flex items-start justify-between rounded-lg border border-gray-100 p-4"
-              >
-                <div className="flex-1">
-                  <div className="mb-1 flex items-center gap-2">
-                    <span
-                      className={`rounded-full px-3 py-1 text-xs font-medium ${getCheckResultColor(
-                        check.result
-                      )}`}
-                    >
-                      {check.result.toUpperCase()}
-                    </span>
-                    {check.confidence_score && (
-                      <span className="text-xs text-gray-500">
-                        Confidence: {(check.confidence_score * 100).toFixed(0)}%
+            {session.checks.map((check, index) => {
+              // Find the step description for this check
+              const checkStep = allSteps.find((step) => step.id === check.step_id);
+              const stepIndex = allSteps.findIndex((step) => step.id === check.step_id);
+
+              return (
+                <div
+                  key={check.id}
+                  className="flex items-start justify-between rounded-lg border border-gray-100 p-4"
+                >
+                  <div className="flex-1">
+                    <div className="mb-2 flex items-center gap-2">
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-medium ${getCheckResultColor(
+                          check.result
+                        )}`}
+                      >
+                        {check.result.toUpperCase()}
                       </span>
+                      {check.confidence_score && (
+                        <span className="text-xs text-gray-500">
+                          Confidence: {(check.confidence_score * 100).toFixed(0)}%
+                        </span>
+                      )}
+                      {checkStep && (
+                        <span className="text-xs font-medium text-blue-600">
+                          Step {stepIndex + 1}: {checkStep.description}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-700">{check.feedback_text}</p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      {new Date(check.checked_at).toLocaleString()}
+                    </p>
+
+                    {/* Override button for failed checks */}
+                    {check.result === "fail" && (
+                      <button
+                        onClick={() => handleOverride(check.id)}
+                        className="mt-2 rounded bg-yellow-600 px-3 py-1 text-xs font-medium text-white hover:bg-yellow-700"
+                      >
+                        🔓 Override (Supervisor)
+                      </button>
+                    )}
+
+                    {/* Display override information */}
+                    {check.result === "override" && (
+                      <div className="mt-2 rounded-lg bg-yellow-50 p-2 text-xs text-yellow-800">
+                        <div className="font-medium">⚠️ Overridden by Supervisor</div>
+                        {check.override_reason && (
+                          <div className="mt-1">Reason: {check.override_reason}</div>
+                        )}
+                      </div>
                     )}
                   </div>
-                  <p className="text-sm text-gray-700">{check.feedback_text}</p>
-                  <p className="mt-1 text-xs text-gray-500">
-                    {new Date(check.checked_at).toLocaleString()}
-                  </p>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

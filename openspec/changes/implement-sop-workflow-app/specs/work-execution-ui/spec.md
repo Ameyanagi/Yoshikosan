@@ -48,6 +48,43 @@ The system SHALL capture photos when user confirms step completion.
 
 ---
 
+### Requirement: Photo Upload Alternative (Debug Mode)
+**ID**: work-ui-002b
+**Priority**: Medium
+**Category**: Frontend
+
+The system SHALL provide a photo upload option as an alternative to camera capture for testing and accessibility.
+
+#### Scenario: Upload photo instead of using camera
+**Given** a work session is active
+**And** camera access is denied OR debug mode is enabled
+**When** the user clicks "Upload Photo" button
+**Then** a file picker opens
+**And** the user selects a photo from device storage
+**And** the photo is converted to base64
+**And** a thumbnail preview is shown
+
+**Implementation**:
+- Show "Upload Photo" button as fallback or debug option
+- Use `<input type="file" accept="image/*" />`
+- Convert uploaded file to base64 using `FileReader.readAsDataURL()`
+- Debug toggle: Show upload button when `?debug=true` in URL
+- Same data flow: Upload result is sent as `image_base64` to API
+- Useful for: Testing with sample photos, environments without camera, accessibility
+
+**Debug Mode Activation**:
+```typescript
+// URL: /sessions/123?debug=true
+const searchParams = useSearchParams();
+const debugMode = searchParams.get('debug') === 'true';
+
+{debugMode && (
+  <button onClick={handleUpload}>📁 Upload Photo (Debug)</button>
+)}
+```
+
+---
+
 ### Requirement: Audio Recording
 **ID**: work-ui-003
 **Priority**: High
@@ -70,6 +107,60 @@ The system SHALL record audio confirmations from workers.
 - Format: WebM or MP3 (browser-dependent)
 - Convert Blob to base64 before submission
 - Show recording timer
+
+---
+
+### Requirement: Text Input Alternative for Audio
+**ID**: work-ui-003b
+**Priority**: Medium
+**Category**: Frontend
+
+The system SHALL provide a text input option as an alternative to audio recording for testing and accessibility.
+
+#### Scenario: Type confirmation instead of recording audio
+**Given** a work session is active
+**And** microphone access is denied OR debug mode is enabled
+**When** the user enters text in the confirmation input
+**And** clicks "Submit Check"
+**Then** the text is used instead of audio transcript
+**And** sent to the backend as the audio description
+
+**Implementation**:
+- Show text input field as fallback or debug option
+- Placeholder: "例：バルブ閉ヨシッ！" (Example: "Valve closed, Yoshi!")
+- Text is sent in the same format as would be transcribed from audio
+- Backend treats it identically to Whisper transcription output
+- Debug toggle: Show text input when `?debug=true` in URL
+- Useful for: Silent environments, testing, accessibility (hearing impaired)
+
+**API Behavior**:
+```typescript
+// When text input is used instead of audio
+POST /api/v1/checks
+{
+  "session_id": "uuid",
+  "step_id": "uuid",
+  "image_base64": "data:image/jpeg;base64,...",
+  "audio_base64": null,  // No audio data
+  "audio_transcript": "バルブ閉ヨシッ！"  // Direct text input
+}
+
+// Backend skips Whisper transcription, uses provided text directly
+```
+
+**Debug Mode UI**:
+```tsx
+{debugMode && (
+  <div>
+    <label>Or type your confirmation:</label>
+    <input 
+      type="text" 
+      placeholder="例：バルブ閉ヨシッ！"
+      onChange={(e) => setManualTranscript(e.target.value)}
+    />
+  </div>
+)}
+```
 
 ---
 

@@ -202,7 +202,8 @@ class ApiClient {
       session_id: string;
       step_id: string;
       image_base64: string;
-      audio_base64: string;
+      audio_base64?: string;
+      audio_transcript?: string;
     }) =>
       this.request<
         paths["/api/v1/checks"]["post"]["responses"][201]["content"]["application/json"]
