@@ -172,14 +172,14 @@ export default function SOPDetailPage() {
 
                   {step.expected_action && (
                     <div className="mb-2 text-sm">
-                      <span className="font-medium text-gray-700">Expected Action:</span>{" "}
+                      <span className="font-medium text-gray-700">想定される作業:</span>{" "}
                       <span className="text-gray-600">{step.expected_action}</span>
                     </div>
                   )}
 
                   {step.expected_result && (
                     <div className="mb-2 text-sm">
-                      <span className="font-medium text-gray-700">Expected Result:</span>{" "}
+                      <span className="font-medium text-gray-700">期待される結果:</span>{" "}
                       <span className="text-gray-600">{step.expected_result}</span>
                     </div>
                   )}
@@ -187,7 +187,7 @@ export default function SOPDetailPage() {
                   {/* Hazards */}
                   {step.hazards.length > 0 && (
                     <div className="mt-3 space-y-2">
-                      <h4 className="text-sm font-medium text-gray-900">⚠️ Safety Hazards:</h4>
+                      <h4 className="text-sm font-medium text-gray-900">⚠️ 危険箇所:</h4>
                       {step.hazards.map((hazard) => (
                         <div
                           key={hazard.id}
@@ -198,7 +198,7 @@ export default function SOPDetailPage() {
                               <p className="text-sm font-medium">{hazard.description}</p>
                               {hazard.mitigation && (
                                 <p className="mt-1 text-xs">
-                                  <span className="font-medium">Mitigation:</span>{" "}
+                                  <span className="font-medium">対策:</span>{" "}
                                   {hazard.mitigation}
                                 </p>
                               )}

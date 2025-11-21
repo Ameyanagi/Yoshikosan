@@ -254,21 +254,21 @@ export default function SessionDetailPage() {
 
                 {currentStep.expected_action && (
                   <div className="mb-3 rounded-lg bg-blue-50 p-3">
-                    <div className="text-sm font-medium text-blue-900">Expected Action:</div>
+                    <div className="text-sm font-medium text-blue-900">想定される作業:</div>
                     <div className="mt-1 text-sm text-blue-800">{currentStep.expected_action}</div>
                   </div>
                 )}
 
                 {currentStep.expected_result && (
                   <div className="mb-3 rounded-lg bg-green-50 p-3">
-                    <div className="text-sm font-medium text-green-900">Expected Result:</div>
+                    <div className="text-sm font-medium text-green-900">期待される結果:</div>
                     <div className="mt-1 text-sm text-green-800">{currentStep.expected_result}</div>
                   </div>
                 )}
 
                 {currentStep.hazards.length > 0 && (
                   <div className="mt-4">
-                    <h3 className="mb-2 text-sm font-semibold text-red-900">⚠️ Safety Hazards:</h3>
+                    <h3 className="mb-2 text-sm font-semibold text-red-900">⚠️ 危険箇所:</h3>
                     <div className="space-y-2">
                       {currentStep.hazards.map((hazard) => (
                         <div
@@ -280,7 +280,7 @@ export default function SessionDetailPage() {
                           </div>
                           {hazard.mitigation && (
                             <div className="mt-1 text-xs text-red-700">
-                              Mitigation: {hazard.mitigation}
+                              対策: {hazard.mitigation}
                             </div>
                           )}
                         </div>
