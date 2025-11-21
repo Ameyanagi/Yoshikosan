@@ -29,10 +29,27 @@ class ApiClient {
         },
       });
 
-      const data = response.ok ? await response.json() : null;
-      const error = !response.ok
-        ? data?.detail || `Request failed with status ${response.status}`
-        : null;
+      // Parse JSON response for both success and error cases
+      let data = null;
+      let error = null;
+
+      try {
+        const json = await response.json();
+        if (response.ok) {
+          data = json;
+        } else {
+          // For error responses, extract the error message
+          error = json?.detail || json?.message || `Request failed with status ${response.status}`;
+          console.error(`API Error [${response.status}]:`, error, json);
+        }
+      } catch (parseError) {
+        // If JSON parsing fails
+        if (response.ok) {
+          error = "Failed to parse response";
+        } else {
+          error = `Request failed with status ${response.status}`;
+        }
+      }
 
       return {
         data,
@@ -40,6 +57,7 @@ class ApiClient {
         status: response.status,
       };
     } catch (error) {
+      console.error("API request failed:", error);
       return {
         data: null,
         error: error instanceof Error ? error.message : "Unknown error",
@@ -56,10 +74,27 @@ class ApiClient {
         body: formData,
       });
 
-      const data = response.ok ? await response.json() : null;
-      const error = !response.ok
-        ? data?.detail || `Request failed with status ${response.status}`
-        : null;
+      // Parse JSON response for both success and error cases
+      let data = null;
+      let error = null;
+
+      try {
+        const json = await response.json();
+        if (response.ok) {
+          data = json;
+        } else {
+          // For error responses, extract the error message
+          error = json?.detail || json?.message || `Request failed with status ${response.status}`;
+          console.error(`API Error [${response.status}]:`, error, json);
+        }
+      } catch (parseError) {
+        // If JSON parsing fails
+        if (response.ok) {
+          error = "Failed to parse response";
+        } else {
+          error = `Request failed with status ${response.status}`;
+        }
+      }
 
       return {
         data,
@@ -67,6 +102,7 @@ class ApiClient {
         status: response.status,
       };
     } catch (error) {
+      console.error("API multipart request failed:", error);
       return {
         data: null,
         error: error instanceof Error ? error.message : "Unknown error",

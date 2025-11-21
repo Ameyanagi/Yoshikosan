@@ -43,15 +43,23 @@ export default function SOPDetailPage() {
     setError(null);
 
     try {
+      // Log the request for debugging
+      console.log("Starting session for SOP:", sopId);
+      
       const response = await apiClient.sessions.start({ sop_id: sopId });
 
       if (response.error) {
+        console.error("Session start failed:", response.error);
         setError(response.error);
       } else if (response.data) {
-        router.push(`/sessions/${response.data.session.id}`);
+        console.log("Session started successfully:", response.data.session.id);
+        // Use replace instead of push to avoid history.pushState warning
+        router.replace(`/sessions/${response.data.session.id}`);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to start session");
+      const errorMessage = err instanceof Error ? err.message : "Failed to start session";
+      console.error("Exception during session start:", err);
+      setError(errorMessage);
     } finally {
       setStartingSession(false);
     }
