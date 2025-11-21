@@ -99,6 +99,7 @@ async def get_audit_session(
     session_id: UUID,
     current_user: User = Depends(get_current_user),
     session_repo: SQLAlchemyWorkSessionRepository = Depends(get_session_repository),
+    sop_repo: SQLAlchemySOPRepository = Depends(get_sop_repository),
 ) -> WorkSessionSchema:
     """Get full audit trail for a session (supervisor only).
 
@@ -106,6 +107,7 @@ async def get_audit_session(
         session_id: Session ID
         current_user: Current authenticated user (supervisor)
         session_repo: Session repository
+        sop_repo: SOP repository
 
     Returns:
         WorkSessionSchema with full audit trail
@@ -122,7 +124,11 @@ async def get_audit_session(
             status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
         )
 
-    return work_session_to_schema(session)
+    # Get SOP title
+    sop = await sop_repo.get_by_id(session.sop_id)
+    sop_title = sop.title if sop else "Unknown SOP"
+
+    return work_session_to_schema(session, sop_title)
 
 
 @router.post(
@@ -134,6 +140,7 @@ async def approve_session(
     session_id: UUID,
     current_user: User = Depends(get_current_user),
     session_repo: SQLAlchemyWorkSessionRepository = Depends(get_session_repository),
+    sop_repo: SQLAlchemySOPRepository = Depends(get_sop_repository),
 ) -> ApproveSessionResponse:
     """Approve a completed session (supervisor only).
 
@@ -141,6 +148,7 @@ async def approve_session(
         session_id: Session ID
         current_user: Current authenticated user (supervisor)
         session_repo: Session repository
+        sop_repo: SOP repository
 
     Returns:
         ApproveSessionResponse
@@ -158,8 +166,12 @@ async def approve_session(
 
         response = await use_case.execute(request)
 
+        # Get SOP title
+        sop = await sop_repo.get_by_id(response.session.sop_id)
+        sop_title = sop.title if sop else "Unknown SOP"
+
         return ApproveSessionResponse(
-            session=work_session_to_schema(response.session), approved=True
+            session=work_session_to_schema(response.session, sop_title), approved=True
         )
 
     except ValueError as e:
@@ -178,6 +190,7 @@ async def reject_session(
     request: RejectSessionRequestSchema = Body(...),
     current_user: User = Depends(get_current_user),
     session_repo: SQLAlchemyWorkSessionRepository = Depends(get_session_repository),
+    sop_repo: SQLAlchemySOPRepository = Depends(get_sop_repository),
 ) -> RejectSessionResponse:
     """Reject a completed session (supervisor only).
 
@@ -186,6 +199,7 @@ async def reject_session(
         request: Reject request with reason
         current_user: Current authenticated user (supervisor)
         session_repo: Session repository
+        sop_repo: SOP repository
 
     Returns:
         RejectSessionResponse
@@ -203,8 +217,12 @@ async def reject_session(
 
         response = await use_case.execute(use_case_request)
 
+        # Get SOP title
+        sop = await sop_repo.get_by_id(response.session.sop_id)
+        sop_title = sop.title if sop else "Unknown SOP"
+
         return RejectSessionResponse(
-            session=work_session_to_schema(response.session), rejected=True
+            session=work_session_to_schema(response.session, sop_title), rejected=True
         )
 
     except ValueError as e:
