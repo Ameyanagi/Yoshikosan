@@ -189,10 +189,18 @@ class WorkSessionModel(Base):
     approved_by: Mapped[UUID | None] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
+    paused_at: Mapped[datetime | None] = mapped_column(
+        TIMESTAMP(timezone=True), nullable=True
+    )
+    aborted_at: Mapped[datetime | None] = mapped_column(
+        TIMESTAMP(timezone=True), nullable=True
+    )
+    abort_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     locked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     rejection_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Relationships
+    sop: Mapped["SOPModel"] = relationship("SOPModel", lazy="joined")
     checks: Mapped[list["SafetyCheckModel"]] = relationship(
         "SafetyCheckModel",
         back_populates="session",

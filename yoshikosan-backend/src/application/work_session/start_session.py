@@ -67,6 +67,8 @@ class StartSessionUseCase:
     async def execute(self, request: StartSessionRequest) -> StartSessionResponse:
         """Execute the start session use case.
 
+        Workers can now have multiple sessions in progress simultaneously.
+
         Args:
             request: Start session request
 
@@ -74,7 +76,7 @@ class StartSessionUseCase:
             StartSessionResponse with session and first step
 
         Raises:
-            ValueError: If SOP not found, not structured, or worker has active session
+            ValueError: If SOP not found or not structured
         """
         # Load SOP
         sop = await self.sop_repository.get_by_id(request.sop_id)
@@ -86,15 +88,6 @@ class StartSessionUseCase:
         if validation_errors:
             raise ValueError(
                 f"SOP is not properly structured: {', '.join(validation_errors)}"
-            )
-
-        # Check for existing active session
-        existing_session = await self.session_repository.get_current_for_worker(
-            request.worker_id
-        )
-        if existing_session:
-            raise ValueError(
-                f"Worker already has an active session: {existing_session.id}"
             )
 
         # Get first step ID

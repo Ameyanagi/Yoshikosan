@@ -159,6 +159,47 @@ export default function SessionDetailPage() {
     }
   };
 
+  const handlePauseSession = async () => {
+    const response = await apiClient.sessions.pause(sessionId);
+
+    if (response.error) {
+      setError(response.error);
+    } else {
+      // Refresh session
+      const sessionResponse = await apiClient.sessions.get(sessionId);
+      if (sessionResponse.data) {
+        setSession(sessionResponse.data);
+      }
+    }
+  };
+
+  const handleResumeSession = async () => {
+    const response = await apiClient.sessions.resume(sessionId);
+
+    if (response.error) {
+      setError(response.error);
+    } else {
+      // Refresh session
+      const sessionResponse = await apiClient.sessions.get(sessionId);
+      if (sessionResponse.data) {
+        setSession(sessionResponse.data);
+      }
+    }
+  };
+
+  const handleAbortSession = async () => {
+    const reason = prompt("Enter reason for aborting (optional):");
+    if (reason === null) return; // User cancelled
+
+    const response = await apiClient.sessions.abort(sessionId, reason || undefined);
+
+    if (response.error) {
+      setError(response.error);
+    } else {
+      router.push("/sessions");
+    }
+  };
+
   const handleOverride = async (checkId: string) => {
     const reason = prompt("Override reason (supervisor note):");
 
@@ -228,15 +269,60 @@ export default function SessionDetailPage() {
     <div className="mx-auto max-w-7xl px-4 py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="mb-2 text-3xl font-bold">{sop.title}</h1>
-        <div className="flex items-center gap-4 text-sm text-gray-600">
-          <span className="rounded-full bg-blue-100 px-3 py-1 font-medium text-blue-800">
-            {session.status.replace("_", " ").toUpperCase()}
-          </span>
-          <span>
-            Step {currentStepIndex + 1} of {allSteps.length}
-          </span>
-          <span>{session.checks.length} safety checks performed</span>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="mb-2 text-3xl font-bold">{sop.title}</h1>
+            <div className="flex items-center gap-4 text-sm text-gray-600">
+              <span className={`rounded-full px-3 py-1 font-medium ${
+                session.status === "in_progress" ? "bg-blue-100 text-blue-800" :
+                session.status === "paused" ? "bg-purple-100 text-purple-800" :
+                session.status === "completed" ? "bg-yellow-100 text-yellow-800" :
+                session.status === "aborted" ? "bg-gray-100 text-gray-800" :
+                session.status === "approved" ? "bg-green-100 text-green-800" :
+                "bg-red-100 text-red-800"
+              }`}>
+                {session.status.replace("_", " ").toUpperCase()}
+              </span>
+              <span>
+                Step {currentStepIndex + 1} of {allSteps.length}
+              </span>
+              <span>{session.checks.length} safety checks performed</span>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            {session.status === "in_progress" && (
+              <>
+                <button
+                  onClick={handlePauseSession}
+                  className="rounded bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700"
+                >
+                  Pause Session
+                </button>
+                <button
+                  onClick={handleAbortSession}
+                  className="rounded bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+                >
+                  Abort Session
+                </button>
+              </>
+            )}
+            {session.status === "paused" && (
+              <>
+                <button
+                  onClick={handleResumeSession}
+                  className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  Resume Session
+                </button>
+                <button
+                  onClick={handleAbortSession}
+                  className="rounded bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+                >
+                  Abort Session
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -307,7 +393,7 @@ export default function SessionDetailPage() {
         </div>
 
         {/* Right Column: Safety Check */}
-        {currentStep && session.status === "in_progress" && (
+        {currentStep && (session.status === "in_progress" || session.status === "paused") && (
           <div className="space-y-6">
             <div className="rounded-lg border border-gray-200 bg-white p-6">
               <div className="mb-4 flex items-center justify-between">
@@ -425,6 +511,7 @@ export default function SessionDetailPage() {
                 <button
                   onClick={handleExecuteCheck}
                   disabled={
+                    session.status !== "in_progress" ||
                     !capturedImage ||
                     (audioSource === 'microphone' && !capturedAudio) ||
                     (audioSource === 'text' && !audioTranscript) ||
@@ -432,7 +519,7 @@ export default function SessionDetailPage() {
                   }
                   className="w-full rounded-lg bg-blue-600 px-6 py-3 font-medium text-white hover:bg-blue-700 disabled:bg-gray-400"
                 >
-                  {checking ? "Verifying with AI..." : "Execute Safety Check"}
+                  {session.status === "paused" ? "Resume session to check" : checking ? "Verifying with AI..." : "Execute Safety Check"}
                 </button>
               </div>
             </div>

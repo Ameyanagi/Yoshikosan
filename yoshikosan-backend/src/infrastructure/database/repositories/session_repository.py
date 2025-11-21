@@ -11,7 +11,7 @@ from src.infrastructure.database.mappers.session_mapper import (
     session_to_domain,
     session_to_model,
 )
-from src.infrastructure.database.models import WorkSessionModel
+from src.infrastructure.database.models import SOPModel, WorkSessionModel
 
 
 class SQLAlchemyWorkSessionRepository:
@@ -44,6 +44,9 @@ class SQLAlchemyWorkSessionRepository:
             existing.completed_at = work_session.completed_at
             existing.approved_at = work_session.approved_at
             existing.approved_by = work_session.approved_by
+            existing.paused_at = work_session.paused_at
+            existing.aborted_at = work_session.aborted_at
+            existing.abort_reason = work_session.abort_reason
             existing.locked = work_session.locked
             existing.rejection_reason = work_session.rejection_reason
 
@@ -72,7 +75,7 @@ class SQLAlchemyWorkSessionRepository:
         return session_to_domain(model)
 
     async def get_by_id(self, session_id: UUID) -> WorkSession | None:
-        """Get a work session by ID with eager loading of checks.
+        """Get a work session by ID with eager loading of checks and SOP.
 
         Args:
             session_id: WorkSession ID
@@ -80,11 +83,14 @@ class SQLAlchemyWorkSessionRepository:
         Returns:
             WorkSession entity if found, None otherwise
         """
-        # Build query with eager loading
+        # Build query with eager loading of checks and SOP
         stmt = (
             select(WorkSessionModel)
             .where(WorkSessionModel.id == session_id)
-            .options(joinedload(WorkSessionModel.checks))
+            .options(
+                joinedload(WorkSessionModel.checks),
+                joinedload(WorkSessionModel.sop)
+            )
         )
 
         result = await self.session.execute(stmt)
@@ -121,22 +127,29 @@ class SQLAlchemyWorkSessionRepository:
 
         return session_to_domain(model)
 
-    async def list_by_worker(self, worker_id: UUID) -> list[WorkSession]:
-        """List all sessions for a worker.
+    async def list_by_worker(
+        self, worker_id: UUID, include_aborted: bool = False
+    ) -> list[WorkSession]:
+        """List sessions for a worker, excluding aborted by default.
 
         Args:
             worker_id: Worker user ID
+            include_aborted: Whether to include aborted sessions (default: False)
 
         Returns:
             List of WorkSession entities ordered by started_at desc
         """
-        # Build query with eager loading
-        stmt = (
-            select(WorkSessionModel)
-            .where(WorkSessionModel.worker_id == worker_id)
-            .options(joinedload(WorkSessionModel.checks))
-            .order_by(WorkSessionModel.started_at.desc())
-        )
+        # Build query with eager loading of checks and SOP
+        stmt = select(WorkSessionModel).where(WorkSessionModel.worker_id == worker_id)
+
+        # Exclude aborted sessions by default
+        if not include_aborted:
+            stmt = stmt.where(WorkSessionModel.status != SessionStatus.ABORTED.value)
+
+        stmt = stmt.options(
+            joinedload(WorkSessionModel.checks),
+            joinedload(WorkSessionModel.sop)
+        ).order_by(WorkSessionModel.started_at.desc())
 
         result = await self.session.execute(stmt)
         models = result.unique().scalars().all()
@@ -144,16 +157,19 @@ class SQLAlchemyWorkSessionRepository:
         return [session_to_domain(model) for model in models]
 
     async def list_pending_review(self) -> list[WorkSession]:
-        """List all completed sessions pending supervisor review.
+        """List all completed sessions pending supervisor review (excluding aborted).
 
         Returns:
             List of WorkSession entities with status COMPLETED ordered by completed_at
         """
-        # Build query for completed sessions
+        # Build query for completed sessions, excluding aborted
         stmt = (
             select(WorkSessionModel)
             .where(WorkSessionModel.status == SessionStatus.COMPLETED.value)
-            .options(joinedload(WorkSessionModel.checks))
+            .options(
+                joinedload(WorkSessionModel.checks),
+                joinedload(WorkSessionModel.sop)
+            )
             .order_by(WorkSessionModel.completed_at.asc())
         )
 

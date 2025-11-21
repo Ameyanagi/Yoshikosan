@@ -227,6 +227,28 @@ class ApiClient {
       >(`/v1/sessions/${id}/complete`, {
         method: "POST",
       }),
+
+    pause: async (id: string) =>
+      this.request<
+        paths["/api/v1/sessions/{session_id}/pause"]["post"]["responses"][200]["content"]["application/json"]
+      >(`/v1/sessions/${id}/pause`, {
+        method: "POST",
+      }),
+
+    resume: async (id: string) =>
+      this.request<
+        paths["/api/v1/sessions/{session_id}/resume"]["post"]["responses"][200]["content"]["application/json"]
+      >(`/v1/sessions/${id}/resume`, {
+        method: "POST",
+      }),
+
+    abort: async (id: string, reason?: string) =>
+      this.request<
+        paths["/api/v1/sessions/{session_id}/abort"]["post"]["responses"][200]["content"]["application/json"]
+      >(`/v1/sessions/${id}/abort`, {
+        method: "POST",
+        body: JSON.stringify({ reason: reason || null }),
+      }),
   };
 
   // ============================================================================
