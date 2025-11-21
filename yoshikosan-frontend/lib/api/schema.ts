@@ -708,6 +708,8 @@ export interface components {
       feedback_text: string;
       /** Feedback Audio Base64 */
       feedback_audio_base64: string;
+      /** Feedback Audio Url */
+      feedback_audio_url?: string | null;
       /** Confidence Score */
       confidence_score: number;
       /** Needs Review */
@@ -891,6 +893,8 @@ export interface components {
       result: string;
       /** Feedback Text */
       feedback_text: string;
+      /** Feedback Audio Url */
+      feedback_audio_url?: string | null;
       /** Confidence Score */
       confidence_score?: number | null;
       /**
@@ -927,6 +931,8 @@ export interface components {
       session: components["schemas"]["WorkSessionSchema"];
       /** First Step Id */
       first_step_id: string | null;
+      /** Welcome Audio Url */
+      welcome_audio_url?: string | null;
     };
     /**
      * StepSchema
