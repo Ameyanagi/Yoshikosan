@@ -191,6 +191,8 @@ class ApiClient {
       >(`/v1/sessions/${id}/complete`, {
         method: "POST",
       }),
+
+    getWelcomeAudioUrl: (sessionId: string) => `${this.baseUrl}/v1/sessions/${sessionId}/welcome-audio`,
   };
 
   // ============================================================================
@@ -219,6 +221,8 @@ class ApiClient {
         method: "POST",
         body: JSON.stringify(data),
       }),
+
+    getAudioUrl: (checkId: string) => `${this.baseUrl}/v1/checks/${checkId}/audio`,
   };
 
   // ============================================================================

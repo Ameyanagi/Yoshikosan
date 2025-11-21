@@ -6,6 +6,7 @@ from pathlib import Path
 from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, HTTPException, status
+from fastapi.responses import FileResponse
 
 from src.api.dependencies.auth import get_current_user
 from src.api.dependencies.repositories import get_session_repository, get_sop_repository
@@ -115,6 +116,7 @@ async def execute_safety_check(
             result=response.result.value,
             feedback_text=response.feedback_text,
             feedback_audio_base64=feedback_audio_base64,
+            feedback_audio_url=response.feedback_audio_url,
             confidence_score=response.confidence_score,
             needs_review=response.needs_review,
             next_step_id=response.next_step_id,
@@ -232,3 +234,65 @@ async def override_check(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
         ) from e
+
+
+@router.get("/{check_id}/audio", response_class=FileResponse)
+async def get_check_audio(
+    check_id: UUID,
+    current_user: User = Depends(get_current_user),
+    session_repo: SQLAlchemyWorkSessionRepository = Depends(get_session_repository),
+) -> FileResponse:
+    """Get audio feedback for a safety check.
+
+    Args:
+        check_id: Check ID
+        current_user: Current authenticated user
+        session_repo: Session repository
+
+    Returns:
+        FileResponse with audio file (MP3)
+
+    Raises:
+        HTTPException: If check not found, no audio available, or not authorized
+    """
+    # Find session containing this check
+    user_sessions = await session_repo.list_by_worker(current_user.id)
+    pending_sessions = await session_repo.list_pending_review()
+
+    # Combine and deduplicate sessions
+    all_sessions = {session.id: session for session in user_sessions + pending_sessions}
+
+    target_check = None
+    for session in all_sessions.values():
+        for check in session.checks:
+            if check.id == check_id:
+                target_check = check
+                break
+        if target_check:
+            break
+
+    if not target_check:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Check not found"
+        )
+
+    if not target_check.feedback_audio_url:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No audio feedback available for this check",
+        )
+
+    # Verify file exists
+    audio_path = Path(target_check.feedback_audio_url)
+    if not audio_path.exists():
+        logger.error(f"Audio file not found: {audio_path}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Audio file not found on server",
+        )
+
+    return FileResponse(
+        path=str(audio_path),
+        media_type="audio/mpeg",
+        filename=f"feedback_{check_id}.mp3",
+    )

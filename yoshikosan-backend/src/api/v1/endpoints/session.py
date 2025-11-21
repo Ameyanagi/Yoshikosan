@@ -1,9 +1,11 @@
 """Work session endpoints."""
 
 import logging
+from pathlib import Path
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import FileResponse
 
 from src.api.dependencies.auth import get_current_user
 from src.api.dependencies.repositories import get_session_repository, get_sop_repository
@@ -60,6 +62,7 @@ def work_session_to_schema(session: WorkSession) -> WorkSessionSchema:
                 step_id=check.step_id,
                 result=check.result.value,
                 feedback_text=check.feedback_text,
+                feedback_audio_url=check.feedback_audio_url,
                 confidence_score=check.confidence_score,
                 needs_review=check.needs_review,
                 checked_at=check.checked_at,
@@ -105,6 +108,7 @@ async def start_session(
         return StartSessionResponse(
             session=work_session_to_schema(response.session),
             first_step_id=response.first_step_id,
+            welcome_audio_url=response.welcome_audio_url,
         )
 
     except ValueError as e:
@@ -235,3 +239,53 @@ async def complete_session(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
         ) from e
+
+
+@router.get("/{session_id}/welcome-audio", response_class=FileResponse)
+async def get_welcome_audio(
+    session_id: UUID,
+    current_user: User = Depends(get_current_user),
+    session_repo: SQLAlchemyWorkSessionRepository = Depends(get_session_repository),
+) -> FileResponse:
+    """Get welcome audio for a session.
+
+    Args:
+        session_id: Session ID
+        current_user: Current authenticated user
+        session_repo: Session repository
+
+    Returns:
+        FileResponse with welcome audio file (MP3)
+
+    Raises:
+        HTTPException: If session not found, no audio available, or not authorized
+    """
+    session = await session_repo.get_by_id(session_id)
+
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
+        )
+
+    # Authorization: only worker can access
+    if session.worker_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to access this session's audio",
+        )
+
+    # Build expected welcome audio path
+    audio_path = Path("/tmp/audio/feedback/welcome") / f"{session_id}.mp3"
+
+    if not audio_path.exists():
+        logger.warning(f"Welcome audio file not found: {audio_path}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Welcome audio not available for this session",
+        )
+
+    return FileResponse(
+        path=str(audio_path),
+        media_type="audio/mpeg",
+        filename=f"welcome_{session_id}.mp3",
+    )

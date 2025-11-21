@@ -8,7 +8,7 @@ from uuid import UUID
 
 from src.domain.sop.entities import SOP
 from src.domain.sop.repositories import SOPRepository
-from src.domain.work_session.entities import CheckResult
+from src.domain.work_session.entities import CheckResult, SafetyCheck
 from src.domain.work_session.repositories import WorkSessionRepository
 from src.infrastructure.ai_services.hume import HumeClient
 from src.infrastructure.ai_services.sambanova import SambanovaClient
@@ -101,6 +101,7 @@ class ExecuteSafetyCheckResponse:
     result: CheckResult
     feedback_text: str
     feedback_audio_bytes: bytes
+    feedback_audio_url: str | None
     confidence_score: float
     needs_review: bool
     next_step_id: UUID | None
@@ -230,6 +231,39 @@ class ExecuteSafetyCheckUseCase:
             if temp_audio_path.exists():
                 temp_audio_path.unlink()
 
+    async def _save_audio_feedback(
+        self,
+        audio_bytes: bytes,
+        session_id: UUID,
+        check_id: UUID
+    ) -> str:
+        """Save audio feedback to file system.
+
+        Args:
+            audio_bytes: Audio data (MP3)
+            session_id: Session ID for directory organization
+            check_id: Check ID for unique filename
+
+        Returns:
+            File path to saved audio
+
+        Raises:
+            IOError: If file write fails
+        """
+        # Create directory structure
+        audio_dir = Path("/tmp/audio/feedback") / str(session_id)
+        audio_dir.mkdir(parents=True, exist_ok=True)
+
+        # Save audio file
+        audio_path = audio_dir / f"{check_id}.mp3"
+        audio_path.write_bytes(audio_bytes)
+
+        # Set readable permissions
+        audio_path.chmod(0o644)
+
+        logger.info(f"Saved audio feedback to {audio_path}")
+        return str(audio_path)
+
     async def execute(
         self, request: ExecuteSafetyCheckRequest
     ) -> ExecuteSafetyCheckResponse:
@@ -316,14 +350,33 @@ class ExecuteSafetyCheckUseCase:
         logger.info("Generating voice feedback with Hume AI")
         feedback_audio_bytes = await self._synthesize_audio_feedback(feedback_text)
 
-        # Add safety check to session
-        session.add_check(
+        # Save audio to file system with graceful degradation
+        audio_url = None
+        try:
+            from uuid import uuid4
+            check_id = uuid4()  # Generate ID before saving
+            audio_file_path = await self._save_audio_feedback(
+                audio_bytes=feedback_audio_bytes,
+                session_id=request.session_id,
+                check_id=check_id
+            )
+            audio_url = audio_file_path  # Store file path in database
+        except IOError as e:
+            # Graceful degradation: log error but continue without audio URL
+            logger.error(f"Failed to save audio feedback: {e}")
+            check_id = uuid4()  # Still need an ID for the check
+
+        # Add safety check to session with audio URL
+        check = SafetyCheck(
+            id=check_id,
             step_id=request.step_id,
             result=result,
             feedback_text=feedback_text,
+            feedback_audio_url=audio_url,
             confidence_score=confidence,
             needs_review=needs_review,
         )
+        session.checks.append(check)
 
         # Advance session if check passed and sequence is correct
         next_step_id = None
@@ -347,6 +400,7 @@ class ExecuteSafetyCheckUseCase:
             result=result,
             feedback_text=feedback_text,
             feedback_audio_bytes=feedback_audio_bytes,
+            feedback_audio_url=f"/api/v1/checks/{check_id}/audio" if audio_url else None,
             confidence_score=confidence,
             needs_review=needs_review,
             next_step_id=next_step_id,

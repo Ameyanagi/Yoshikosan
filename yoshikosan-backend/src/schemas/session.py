@@ -13,6 +13,7 @@ class SafetyCheckSchema(BaseModel):
     step_id: UUID
     result: str  # pass, fail, override
     feedback_text: str
+    feedback_audio_url: str | None = None
     confidence_score: float | None = None
     needs_review: bool = False
     checked_at: datetime
@@ -48,6 +49,7 @@ class StartSessionResponse(BaseModel):
 
     session: WorkSessionSchema
     first_step_id: UUID | None
+    welcome_audio_url: str | None = None
 
 
 class CompleteSessionResponse(BaseModel):

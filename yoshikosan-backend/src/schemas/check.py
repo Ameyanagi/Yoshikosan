@@ -21,6 +21,7 @@ class ExecuteCheckResponse(BaseModel):
     result: str  # pass, fail
     feedback_text: str
     feedback_audio_base64: str
+    feedback_audio_url: str | None = None
     confidence_score: float
     needs_review: bool
     next_step_id: UUID | None

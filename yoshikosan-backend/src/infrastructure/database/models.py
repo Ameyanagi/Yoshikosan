@@ -220,6 +220,7 @@ class SafetyCheckModel(Base):
     )
     result: Mapped[str] = mapped_column(Text, nullable=False)
     feedback_text: Mapped[str] = mapped_column(Text, nullable=False)
+    feedback_audio_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     confidence_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     needs_review: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     checked_at: Mapped[datetime] = mapped_column(

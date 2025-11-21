@@ -11,6 +11,7 @@ import { CameraCapture } from "@/components/camera-capture";
 import { AudioCapture } from "@/components/audio-capture";
 import { PhotoUpload } from "@/components/photo-upload";
 import { TextConfirmation } from "@/components/text-confirmation";
+import { AudioReplayButton } from "@/components/audio-replay-button";
 import type { paths } from "@/lib/api/schema";
 
 type WorkSession =
@@ -44,6 +45,8 @@ export default function SessionDetailPage() {
   const [audioTranscript, setAudioTranscript] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
   const [feedbackAudio, setFeedbackAudio] = useState<string | null>(null);
+  const [welcomeAudioUrl, setWelcomeAudioUrl] = useState<string | null>(null);
+  const [latestCheckAudioUrl, setLatestCheckAudioUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -124,11 +127,16 @@ export default function SessionDetailPage() {
       if (response.error) {
         setError(response.error);
       } else if (response.data) {
-        // Play feedback audio
+        // Play feedback audio from base64
         if (response.data.feedback_audio_base64) {
           setFeedbackAudio(response.data.feedback_audio_base64);
           const audio = new Audio(`data:audio/webm;base64,${response.data.feedback_audio_base64}`);
           audio.play();
+        }
+
+        // Store latest check audio URL for replay
+        if (response.data.feedback_audio_url) {
+          setLatestCheckAudioUrl(response.data.feedback_audio_url);
         }
 
         // Refresh session
@@ -241,6 +249,29 @@ export default function SessionDetailPage() {
       </div>
 
       {error && <div className="mb-4 rounded-lg bg-red-50 p-4 text-red-800">{error}</div>}
+
+      {/* Welcome Audio Section (show for new sessions) */}
+      {session.checks.length === 0 && session.status === "in_progress" && (
+        <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <h2 className="mb-2 text-lg font-semibold text-blue-900">
+                🎯 作業を開始します
+              </h2>
+              <p className="text-sm text-blue-800">
+                ようこそ！音声ガイダンスで作業の概要を説明します。
+              </p>
+            </div>
+            <AudioReplayButton
+              audioUrl={apiClient.sessions.getWelcomeAudioUrl(sessionId)}
+              label="ガイダンスを再生"
+              variant="default"
+              size="default"
+              autoPlay={true}
+            />
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-8 lg:grid-cols-2">
         {/* Left Column: Current Step */}
@@ -479,6 +510,18 @@ export default function SessionDetailPage() {
                     <p className="mt-1 text-xs text-gray-500">
                       {new Date(check.checked_at).toLocaleString()}
                     </p>
+
+                    {/* Audio replay button */}
+                    {check.feedback_audio_url && (
+                      <div className="mt-2">
+                        <AudioReplayButton
+                          audioUrl={apiClient.checks.getAudioUrl(check.id)}
+                          label="フィードバックを再生"
+                          variant="outline"
+                          size="sm"
+                        />
+                      </div>
+                    )}
 
                     {/* Override button for failed checks */}
                     {check.result === "fail" && (

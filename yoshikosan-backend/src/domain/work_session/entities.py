@@ -31,6 +31,7 @@ class SafetyCheck:
     result: CheckResult
     feedback_text: str
     id: UUID = field(default_factory=uuid4)
+    feedback_audio_url: str | None = None
     confidence_score: float | None = None
     needs_review: bool = False
     checked_at: datetime = field(default_factory=datetime.now)
@@ -78,6 +79,7 @@ class WorkSession:
         step_id: UUID,
         result: CheckResult,
         feedback_text: str,
+        feedback_audio_url: str | None = None,
         confidence_score: float | None = None,
         needs_review: bool = False,
     ) -> SafetyCheck:
@@ -87,6 +89,7 @@ class WorkSession:
             step_id: ID of the step being checked
             result: Check result (pass/fail/override)
             feedback_text: Feedback message for the worker
+            feedback_audio_url: Optional URL to audio feedback file
             confidence_score: Optional AI confidence score (0.0-1.0)
             needs_review: Whether this check needs supervisor review
 
@@ -104,6 +107,7 @@ class WorkSession:
             step_id=step_id,
             result=result,
             feedback_text=feedback_text,
+            feedback_audio_url=feedback_audio_url,
             confidence_score=confidence_score,
             needs_review=needs_review,
         )
@@ -230,3 +234,16 @@ class WorkSession:
         last_check.result = CheckResult.OVERRIDE
         last_check.override_reason = reason
         last_check.override_by = supervisor_id
+
+    def get_latest_audio_url(self) -> str | None:
+        """Get the most recent audio feedback URL.
+
+        Returns:
+            URL to the latest audio feedback, or None if no audio available
+        """
+        checks_with_audio = [c for c in self.checks if c.feedback_audio_url]
+        if not checks_with_audio:
+            return None
+
+        latest_check = max(checks_with_audio, key=lambda c: c.checked_at)
+        return latest_check.feedback_audio_url
