@@ -7,10 +7,20 @@ from uuid import UUID, uuid4
 
 
 class SessionStatus(str, Enum):
-    """Work session status."""
+    """Work session status.
+    
+    IN_PROGRESS: Session is actively being worked on
+    PAUSED: Session is temporarily paused, can be resumed
+    COMPLETED: All steps completed, awaiting supervisor review
+    ABORTED: Session permanently cancelled, cannot be resumed
+    APPROVED: Supervisor approved the completed session
+    REJECTED: Supervisor rejected the completed session
+    """
 
     IN_PROGRESS = "in_progress"
+    PAUSED = "paused"
     COMPLETED = "completed"
+    ABORTED = "aborted"
     APPROVED = "approved"
     REJECTED = "rejected"
 
@@ -64,6 +74,9 @@ class WorkSession:
     completed_at: datetime | None = None
     approved_at: datetime | None = None
     approved_by: UUID | None = None
+    paused_at: datetime | None = None
+    aborted_at: datetime | None = None
+    abort_reason: str | None = None
     locked: bool = False
     rejection_reason: str | None = None
     checks: list[SafetyCheck] = field(default_factory=list)
@@ -94,9 +107,13 @@ class WorkSession:
             The created SafetyCheck instance
 
         Raises:
-            ValueError: If session is locked or not in progress
+            ValueError: If session is locked, paused, aborted, or not in progress
         """
         self._ensure_not_locked()
+        if self.status == SessionStatus.PAUSED:
+            raise ValueError("Cannot add checks to a paused session")
+        if self.status == SessionStatus.ABORTED:
+            raise ValueError("Cannot add checks to an aborted session")
         if self.status != SessionStatus.IN_PROGRESS:
             raise ValueError("Can only add checks to in-progress sessions")
 
@@ -117,9 +134,13 @@ class WorkSession:
             next_step_id: ID of next step, or None if session is complete
 
         Raises:
-            ValueError: If session is locked or not in progress
+            ValueError: If session is locked, paused, aborted, or not in progress
         """
         self._ensure_not_locked()
+        if self.status == SessionStatus.PAUSED:
+            raise ValueError("Cannot advance a paused session")
+        if self.status == SessionStatus.ABORTED:
+            raise ValueError("Cannot advance an aborted session")
         if self.status != SessionStatus.IN_PROGRESS:
             raise ValueError("Can only advance in-progress sessions")
 
@@ -141,6 +162,53 @@ class WorkSession:
 
         self.status = SessionStatus.COMPLETED
         self.completed_at = datetime.now()
+
+    def pause(self) -> None:
+        """Pause this session temporarily.
+
+        Raises:
+            ValueError: If session is locked or not in progress
+        """
+        self._ensure_not_locked()
+        if self.status != SessionStatus.IN_PROGRESS:
+            raise ValueError("Can only pause in-progress sessions")
+
+        self.status = SessionStatus.PAUSED
+        self.paused_at = datetime.now()
+
+    def resume(self) -> None:
+        """Resume a paused session.
+
+        Raises:
+            ValueError: If session is locked or not paused
+        """
+        self._ensure_not_locked()
+        if self.status != SessionStatus.PAUSED:
+            raise ValueError("Only paused sessions can be resumed")
+
+        self.status = SessionStatus.IN_PROGRESS
+
+    def abort(self, reason: str | None = None) -> None:
+        """Abort this session permanently.
+
+        Args:
+            reason: Optional reason for aborting the session
+
+        Raises:
+            ValueError: If session is locked, completed, approved, or rejected
+        """
+        self._ensure_not_locked()
+        if self.status in (
+            SessionStatus.COMPLETED,
+            SessionStatus.APPROVED,
+            SessionStatus.REJECTED,
+        ):
+            raise ValueError("Cannot abort a completed session")
+
+        self.status = SessionStatus.ABORTED
+        self.aborted_at = datetime.now()
+        if reason:
+            self.abort_reason = reason
 
     def approve(self, supervisor_id: UUID) -> None:
         """Approve this session and lock it.
